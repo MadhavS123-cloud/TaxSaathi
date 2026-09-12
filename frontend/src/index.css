@@ -1,0 +1,15 @@
+@import "./styles/tokens.css";
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+@layer utilities {
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased;
+  }
+}
