@@ -1,0 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..700&display=swap');
+
+:root {
+  /* Colors */
+  --ink: #14171F;
+  --charcoal: #2B2F38;
+  --paper: #F7F5F0;
+  --taupe: #EFEBE1;
+  --paper-raised: #FFFFFF;
+  --hairline: #E4E0D6;
+  --brass: #A9812E;
+  --brass-deep: #7C5E20;
+  --forest: #2F5D48;
+  --rust: #A23B2E;
+  --amber-flag: #B8862B;
+  --ink-muted: #6B6F76;
+
+  /* We override body background to ensure paper color */
+  background-color: var(--paper);
+  color: var(--ink);
+}
