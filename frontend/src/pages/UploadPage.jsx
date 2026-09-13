@@ -4,6 +4,7 @@ import { UploadCloud, FileText, Eye, FileImage } from 'lucide-react';
 import UploadDropzone from '../components/upload/UploadDropzone';
 import DataTable from '../components/ui/DataTable';
 import StatusTag from '../components/ui/StatusTag';
+import { api } from '../services/api';
 
 const formatSize = (bytes) => {
   if (bytes < 1024) return bytes + ' B';
@@ -19,35 +20,48 @@ export default function UploadPage() {
   const [files, setFiles] = useState([]);
   const navigate = useNavigate();
 
-  // Simulation handlers
   const handleFilesSelected = (selectedFiles) => {
-    const newFiles = selectedFiles.map((file) => {
+    selectedFiles.forEach(async (file) => {
+      const fileId = Math.random().toString(36).substr(2, 9);
       const newFileObj = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: fileId,
         name: file.name,
         size: formatSize(file.size),
-        status: 'pending',
+        status: 'processing',
         confidence: null,
         uploadedAt: new Date().toLocaleTimeString(),
       };
 
-      // Simulate transition: pending -> processing -> extracted
-      setTimeout(() => {
-        setFiles(current => current.map(f => 
-          f.id === newFileObj.id ? { ...f, status: 'processing' } : f
-        ));
-        
-        setTimeout(() => {
-          setFiles(current => current.map(f => 
-            f.id === newFileObj.id ? { ...f, status: 'matched', confidence: Math.floor(Math.random() * 15 + 85) } : f
-          ));
-        }, 2000 + Math.random() * 2000);
-      }, 500);
+      setFiles((prev) => [newFileObj, ...prev]);
 
-      return newFileObj;
+      try {
+        const res = await api.extractDocument(file);
+        if (res && res.success) {
+          setFiles((current) =>
+            current.map((f) =>
+              f.id === fileId
+                ? {
+                    ...f,
+                    status: 'matched',
+                    confidence: 98,
+                    extractedData: res.data,
+                  }
+                : f
+            )
+          );
+        } else {
+          setFiles((current) =>
+            current.map((f) =>
+              f.id === fileId ? { ...f, status: 'exception', error: res?.error } : f
+            )
+          );
+        }
+      } catch (err) {
+        setFiles((current) =>
+          current.map((f) => (f.id === fileId ? { ...f, status: 'exception' } : f))
+        );
+      }
     });
-
-    setFiles((prev) => [...newFiles, ...prev]);
   };
 
   const testEmptyState = () => setFiles([]);
@@ -127,7 +141,7 @@ export default function UploadPage() {
           <button 
             className="text-xs font-sans font-medium text-paper bg-ink hover:text-brass px-3 py-1.5 rounded-[2px] transition-colors disabled:opacity-50"
             disabled={row.status !== 'matched'}
-            onClick={() => navigate(`/cases/CAS-2024-001/invoices/${row.id}/review`)}
+            onClick={() => navigate(`/cases/CAS-2024-001/invoices/${row.id}/review`, { state: { extractedData: row.extractedData, filename: row.name } })}
           >
             Review
           </button>
