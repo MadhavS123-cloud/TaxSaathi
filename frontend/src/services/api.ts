@@ -1,47 +1,27 @@
-// Mock API Service Layer
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const api = {
-  extractDocument: async (_file: File) => {
-    // In a real app, this would be:
-    // const formData = new FormData();
-    // formData.append('file', file);
-    // return fetch('http://127.0.0.1:8000/api/extract', { method: 'POST', body: formData });
-    
-    await delay(1500); // simulate extraction time
-    
-    // Mock response
-    return {
-      success: true,
-      data: {
-        confidence: 'HIGH',
-        classifier: 'PRINTED_INVOICE',
-        issuer: {
-          legalEntity: 'Swiggy (Bundl Technologies Pvt Ltd)',
-          cin: 'U74110KA2013PTC096530',
-          gstin: '29AAFCB2983G1ZU',
-          pan: 'AAFCB2983G',
-        },
-        merchant: {
-          tradeName: 'Meghana Foods',
-          proprietor: 'Meghana Foods Pvt Ltd',
-          gstStatus: 'REGISTERED',
-          fssai: '11214333000192',
-        },
-        lineItems: [
-          { id: 1, description: 'Chicken Biryani (Full)', hsn: '210690', taxableValue: 350.00, cgstRate: 2.5, cgstAmt: 8.75, sgstRate: 2.5, sgstAmt: 8.75, igstRate: 0, igstAmt: 0, gross: 367.50 },
-          { id: 2, description: 'Mutton Biryani (Full)', hsn: '210690', taxableValue: 420.00, cgstRate: 2.5, cgstAmt: 10.50, sgstRate: 2.5, sgstAmt: 10.50, igstRate: 0, igstAmt: 0, gross: 441.00 },
-          { id: 3, description: 'Delivery Charges', hsn: '9968', taxableValue: 40.00, cgstRate: 9, cgstAmt: 3.60, sgstRate: 9, sgstAmt: 3.60, igstRate: 0, igstAmt: 0, gross: 47.20 },
-        ],
-        totals: {
-          taxableValue: 810.00,
-          totalTax: 45.20,
-          grandTotal: 855.20
-        },
-        validationPassed: true
+  extractDocument: async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${API_BASE_URL}/api/extract`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Extraction failed with status ${response.status}`);
       }
-    };
+
+      return await response.json();
+    } catch (err) {
+      console.error('API Error in extractDocument:', err);
+      return { success: false, error: String(err) };
+    }
   },
 
   reconcileLedger: async () => {

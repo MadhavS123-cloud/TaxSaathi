@@ -100,8 +100,8 @@ def extract_real_invoice(file_path: str):
     mime_type, _ = mimetypes.guess_type(file_path)
 
     if mime_type and mime_type.startswith("image/"):
-        image = Image.open(file_path)
-        response = model.generate_content([REAL_INVOICE_PROMPT, image])
+        with Image.open(file_path) as image:
+            response = model.generate_content([REAL_INVOICE_PROMPT, image])
     elif file_path.lower().endswith(".pdf"):
         uploaded_pdf = genai.upload_file(file_path, mime_type="application/pdf")
         response = model.generate_content([REAL_INVOICE_PROMPT, uploaded_pdf])
