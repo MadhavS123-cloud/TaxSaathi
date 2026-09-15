@@ -9,6 +9,7 @@ export default function InvoiceReviewPage() {
   const location = useLocation();
   const extracted = location.state?.extractedData;
   const sampleName = location.state?.filename || 'Extracted Invoice';
+  const fileUrl = location.state?.fileUrl;
 
   const [activeField, setActiveField] = useState(null);
   
@@ -140,6 +141,7 @@ export default function InvoiceReviewPage() {
           <DocumentPreview 
             activeField={activeField} 
             onClearHighlight={() => setActiveField(null)} 
+            imageUrl={fileUrl}
           />
         </div>
 

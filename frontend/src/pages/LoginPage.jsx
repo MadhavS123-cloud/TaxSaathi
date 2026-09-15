@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useGoogleLogin } from '@react-oauth/google';
 import PrimaryButton from '../components/ui/PrimaryButton';
 import SecondaryButton from '../components/ui/SecondaryButton';
 
@@ -9,6 +10,15 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: (codeResponse) => {
+      console.log('Google login success:', codeResponse);
+      // TODO: send codeResponse.access_token to the backend for verification
+      navigate('/dashboard');
+    },
+    onError: (error) => console.error('Google Login Failed:', error)
+  });
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -71,8 +81,11 @@ export default function LoginPage() {
         <div className="w-full max-w-[380px]">
           
           {/* Logo Mark */}
-          <div className="w-12 h-12 bg-ink text-paper flex items-center justify-center font-serif font-bold text-2xl rounded-[2px] mb-8">
-            CT
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-12 h-12 bg-ink text-paper flex items-center justify-center font-serif font-bold text-2xl rounded-[2px]">
+              TS
+            </div>
+            <span className="text-2xl font-serif font-medium text-ink">TaxSaathi</span>
           </div>
 
           <div className="mb-10">
@@ -134,6 +147,7 @@ export default function LoginPage() {
 
             <button
               type="button"
+              onClick={() => loginWithGoogle()}
               className="w-full flex items-center justify-center gap-3 bg-white border border-hairline text-ink px-4 py-2.5 text-sm font-sans font-medium rounded-[4px] hover:bg-paper transition-colors"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
