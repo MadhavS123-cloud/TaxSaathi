@@ -1,7 +1,7 @@
 import React from 'react';
 import { ZoomIn, ZoomOut, Maximize, X } from 'lucide-react';
 
-export default function DocumentPreview({ activeField, onClearHighlight }) {
+export default function DocumentPreview({ activeField, onClearHighlight, imageUrl }) {
   const getHighlightClass = (fieldName) => {
     return activeField === fieldName ? 'ring-2 ring-brass bg-brass/5' : 'border border-transparent';
   };
@@ -38,9 +38,10 @@ export default function DocumentPreview({ activeField, onClearHighlight }) {
 
       {/* Simulated Document Preview Area */}
       <div className="flex-1 overflow-auto p-8 bg-paper flex justify-center">
-        {/* Mock Invoice Paper */}
+        {imageUrl ? (
+          <img src={imageUrl} alt="Document Preview" className="max-w-full h-auto object-contain shadow-[0_0_10px_rgba(0,0,0,0.03)] border border-hairline" />
+        ) : (
         <div className="w-full max-w-[800px] bg-white shadow-[0_0_10px_rgba(0,0,0,0.03)] border border-hairline p-10 flex flex-col gap-8 text-ink h-max font-sans">
-          
           {/* Header Block */}
           <div className="flex justify-between items-start border-b border-hairline pb-6">
             <div className={`p-2 transition-colors ${getHighlightClass('vendorName')}`}>
@@ -148,6 +149,7 @@ export default function DocumentPreview({ activeField, onClearHighlight }) {
           </div>
 
         </div>
+        )}
       </div>
     </div>
   );
