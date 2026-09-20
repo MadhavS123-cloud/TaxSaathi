@@ -37,11 +37,11 @@ export default function InvoiceReviewPage() {
       date: { value: doc.invoice_date || 'N/A', confidence: 99 },
       vendorName: { value: supplier.legal_name || supplier.trade_name || 'N/A', confidence: 96 },
       vendorGstin: { value: supplier.gstin || 'N/A', confidence: 100 },
-      taxableValue: { value: tax.subtotal_net_taxable != null ? String(tax.subtotal_net_taxable) : '0.00', confidence: 99 },
-      cgst: { value: tax.total_cgst != null ? String(tax.total_cgst) : '0.00', confidence: 98 },
-      sgst: { value: tax.total_sgst != null ? String(tax.total_sgst) : '0.00', confidence: 98 },
-      igst: { value: tax.total_igst != null ? String(tax.total_igst) : '0.00', confidence: 99 },
-      totalAmount: { value: tax.grand_total != null ? String(tax.grand_total) : '0.00', confidence: 100 },
+      taxableValue: { value: tax.subtotal_net_taxable != null ? Number(tax.subtotal_net_taxable).toFixed(2) : '0.00', confidence: 99 },
+      cgst: { value: tax.total_cgst != null ? Number(tax.total_cgst).toFixed(2) : '0.00', confidence: 98 },
+      sgst: { value: tax.total_sgst != null ? Number(tax.total_sgst).toFixed(2) : '0.00', confidence: 98 },
+      igst: { value: tax.total_igst != null ? Number(tax.total_igst).toFixed(2) : '0.00', confidence: 99 },
+      totalAmount: { value: tax.grand_total != null ? Number(tax.grand_total).toFixed(2) : '0.00', confidence: 100 },
     };
   });
 
@@ -136,12 +136,12 @@ export default function InvoiceReviewPage() {
       {/* 3. Two-Column Split */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* LEFT: Document Preview */}
         <div className="w-1/2 h-full overflow-hidden">
           <DocumentPreview 
             activeField={activeField} 
             onClearHighlight={() => setActiveField(null)} 
             imageUrl={fileUrl}
+            filename={sampleName}
           />
         </div>
 

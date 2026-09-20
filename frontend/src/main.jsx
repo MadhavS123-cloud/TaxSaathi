@@ -8,7 +8,7 @@ const rootElement = document.getElementById('root');
 if (rootElement) {
   createRoot(rootElement).render(
     <React.StrictMode>
-      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "missing-client-id"}>
         <App />
       </GoogleOAuthProvider>
     </React.StrictMode>

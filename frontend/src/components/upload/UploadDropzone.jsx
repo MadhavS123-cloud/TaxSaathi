@@ -51,13 +51,14 @@ export default function UploadDropzone({ onFilesSelected }) {
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
+        data-cursor={isDragActive ? "drop" : undefined}
         className={`w-full min-h-[300px] border border-dashed flex flex-col items-center justify-center p-10 transition-colors ${
           isDragActive 
             ? 'border-brass bg-brass/5' 
             : 'border-hairline bg-paper'
         }`}
       >
-        <div className="w-12 h-12 border border-hairline bg-paper-raised flex items-center justify-center mb-6">
+        <div className="w-12 h-12 border border-hairline bg-paper-raised flex items-center justify-center mb-6 pointer-events-none">
           <Upload size={24} className="text-ink-muted" strokeWidth={1.5} />
         </div>
         

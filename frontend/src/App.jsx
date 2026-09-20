@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
+import CustomCursor from './components/ui/CustomCursor';
 
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import Cases from './pages/Cases';
@@ -15,11 +17,13 @@ import AuditLog from './pages/AuditLog';
 function App() {
   return (
     <BrowserRouter>
+      <CustomCursor />
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
         
-        <Route path="/" element={<AppLayout />}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="/app" element={<AppLayout />}>
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="cases" element={<Cases />} />
           <Route path="cases/:caseId/upload" element={<UploadPage />} />
