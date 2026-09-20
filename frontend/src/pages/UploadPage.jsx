@@ -142,7 +142,7 @@ export default function UploadPage() {
           <button 
             className="text-xs font-sans font-medium text-paper bg-ink hover:text-brass px-3 py-1.5 rounded-[2px] transition-colors disabled:opacity-50"
             disabled={row.status !== 'matched'}
-            onClick={() => navigate(`/cases/CAS-2024-001/invoices/${row.id}/review`, { state: { extractedData: row.extractedData, filename: row.name, fileUrl: row.fileUrl } })}
+            onClick={() => navigate(`/app/cases/CAS-2024-001/invoices/${row.id}/review`, { state: { extractedData: row.extractedData, filename: row.name, fileUrl: row.fileUrl } })}
           >
             Review
           </button>

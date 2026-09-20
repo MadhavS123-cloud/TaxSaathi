@@ -12,14 +12,14 @@ import {
 } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { path: '/dashboard', label: 'Case Dashboard', icon: LayoutDashboard },
-  { path: '/cases/CAS-2024-001/upload', label: 'Document Upload & OCR', icon: UploadCloud },
-  { path: '/cases', label: 'Invoice Data Review', icon: FileSearch },
-  { path: '/reconcile', label: 'Ledger Reconciliation', icon: Scale },
-  { path: '/advisory', label: 'Tax Advisory Chat', icon: MessageSquare },
-  { path: '/drafts', label: 'Client Communication', icon: Users },
-  { path: '/approve', label: 'Review & Approve', icon: CheckSquare },
-  { path: '/audit', label: 'Audit Trail', icon: History },
+  { path: '/app/dashboard', label: 'Case Dashboard', icon: LayoutDashboard },
+  { path: '/app/cases/CAS-2024-001/upload', label: 'Document Upload & OCR', icon: UploadCloud },
+  { path: '/app/cases', label: 'Invoice Data Review', icon: FileSearch },
+  { path: '/app/reconcile', label: 'Ledger Reconciliation', icon: Scale },
+  { path: '/app/advisory', label: 'Tax Advisory Chat', icon: MessageSquare },
+  { path: '/app/drafts', label: 'Client Communication', icon: Users },
+  { path: '/app/approve', label: 'Review & Approve', icon: CheckSquare },
+  { path: '/app/audit', label: 'Audit Trail', icon: History },
 ];
 
 export default function Sidebar() {
@@ -27,9 +27,9 @@ export default function Sidebar() {
     <aside className="w-[240px] h-screen bg-taupe border-r border-hairline flex flex-col fixed left-0 top-0">
       <div className="p-6 flex items-center gap-3">
         <div className="w-8 h-8 bg-ink text-paper flex items-center justify-center font-serif font-bold text-lg rounded-[2px]">
-          TS
+          CTC
         </div>
-        <h1 className="text-ink font-serif text-lg tracking-wide">TaxSaathi</h1>
+        <h1 className="text-ink font-serif text-lg tracking-wide">CA Tax Copilot</h1>
       </div>
       
       <nav className="flex-1 mt-2 flex flex-col gap-0.5">
@@ -37,10 +37,11 @@ export default function Sidebar() {
           <NavLink
             key={item.path}
             to={item.path}
+            data-cursor="interactive"
             className={({ isActive }) =>
               `flex items-center gap-3 px-6 py-2.5 text-sm font-sans transition-all border-l-2 ${
                 isActive 
-                  ? 'border-brass text-ink bg-brass/5' 
+                  ? 'border-brass text-ink bg-[rgba(169,129,46,0.06)]' 
                   : 'border-transparent text-ink-muted hover:text-ink hover:bg-paper'
               }`
             }

@@ -1,10 +1,12 @@
 import React from 'react';
 import { ZoomIn, ZoomOut, Maximize, X } from 'lucide-react';
 
-export default function DocumentPreview({ activeField, onClearHighlight, imageUrl }) {
+export default function DocumentPreview({ activeField, onClearHighlight, imageUrl, filename = '' }) {
   const getHighlightClass = (fieldName) => {
     return activeField === fieldName ? 'ring-2 ring-brass bg-brass/5' : 'border border-transparent';
   };
+
+  const isPdf = filename.toLowerCase().endsWith('.pdf') || (imageUrl && imageUrl.toLowerCase().includes('pdf'));
 
   return (
     <div className="flex flex-col h-full bg-paper-raised border-r border-hairline relative">
@@ -39,7 +41,11 @@ export default function DocumentPreview({ activeField, onClearHighlight, imageUr
       {/* Simulated Document Preview Area */}
       <div className="flex-1 overflow-auto p-8 bg-paper flex justify-center">
         {imageUrl ? (
-          <img src={imageUrl} alt="Document Preview" className="max-w-full h-auto object-contain shadow-[0_0_10px_rgba(0,0,0,0.03)] border border-hairline" />
+          isPdf ? (
+            <iframe src={`${imageUrl}#toolbar=0`} className="w-full h-full shadow-[0_0_10px_rgba(0,0,0,0.03)] border border-hairline" title="Document Preview" />
+          ) : (
+            <img src={imageUrl} alt="Document Preview" className="max-w-full h-auto object-contain shadow-[0_0_10px_rgba(0,0,0,0.03)] border border-hairline" />
+          )
         ) : (
         <div className="w-full max-w-[800px] bg-white shadow-[0_0_10px_rgba(0,0,0,0.03)] border border-hairline p-10 flex flex-col gap-8 text-ink h-max font-sans">
           {/* Header Block */}

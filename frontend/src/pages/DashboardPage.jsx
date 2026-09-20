@@ -153,7 +153,7 @@ export default function DashboardPage() {
       align: 'right',
       cell: (row) => (
         <SecondaryButton 
-          onClick={() => navigate(`/cases/${row.id}/upload`)} 
+          onClick={() => navigate(`/app/cases/${row.id}/upload`)} 
           className="!py-1.5 !px-3 !text-xs hover:border-brass"
         >
           Open

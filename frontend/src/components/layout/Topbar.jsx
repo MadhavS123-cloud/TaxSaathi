@@ -3,14 +3,14 @@ import { Search, LogOut } from 'lucide-react';
 import { useLocation, matchPath } from 'react-router-dom';
 
 const PATH_MAP = {
-  '/dashboard': 'Case Dashboard',
-  '/extract': 'Document Upload & OCR',
-  '/cases': 'Invoice Data Review',
-  '/reconcile': 'Ledger Reconciliation',
-  '/advisory': 'Tax Advisory Chat',
-  '/drafts': 'Client Communication',
-  '/approve': 'Review & Approve',
-  '/audit': 'Audit Trail',
+  '/app/dashboard': 'Case Dashboard',
+  '/app/cases/CAS-2024-001/upload': 'Document Upload & OCR',
+  '/app/cases': 'Invoice Data Review',
+  '/app/reconcile': 'Ledger Reconciliation',
+  '/app/advisory': 'Tax Advisory Chat',
+  '/app/drafts': 'Client Communication',
+  '/app/approve': 'Review & Approve',
+  '/app/audit': 'Audit Trail',
 };
 
 export default function Topbar() {
