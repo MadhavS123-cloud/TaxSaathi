@@ -36,7 +36,7 @@ export default function FinalCta() {
         <div className="w-full lg:w-1/2">
           <RevealOnScroll delay={200}>
             <div className="flex flex-col gap-6">
-              <h3 className="text-sm font-sans uppercase tracking-widest text-ink-muted border-b border-hairline pb-4">
+              <h3 className="text-base font-sans font-semibold text-ink border-b border-hairline pb-4">
                 Onboard in minutes
               </h3>
               <div className="flex flex-col gap-6 pt-2">

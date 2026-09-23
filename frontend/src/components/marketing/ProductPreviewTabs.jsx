@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Scale, MessageSquare, Users } from 'lucide-react';
+import PrimaryButton from '../ui/PrimaryButton';
+import SecondaryButton from '../ui/SecondaryButton';
 
 const TABS = [
   { id: 'extract', label: 'Document Extraction', icon: FileText },
@@ -50,15 +52,12 @@ export default function ProductPreviewTabs() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             data-cursor="interactive"
-            className={`flex items-center gap-2 px-6 py-4 text-sm font-sans transition-colors relative whitespace-nowrap ${
-              activeTab === tab.id ? 'text-ink' : 'text-ink-muted hover:text-ink hover:bg-paper'
+            className={`flex items-center gap-2 px-6 py-4 text-sm font-sans transition-colors relative whitespace-nowrap rounded-[4px] ${
+              activeTab === tab.id ? 'bg-[#E3DFD5] text-ink' : 'text-ink-muted hover:text-ink hover:bg-paper'
             }`}
           >
             <tab.icon size={16} strokeWidth={1.5} />
             {tab.label}
-            {activeTab === tab.id && (
-              <div className="absolute bottom-0 left-0 w-full h-[2px] bg-brass"></div>
-            )}
           </button>
         ))}
       </div>
@@ -286,8 +285,8 @@ export default function ProductPreviewTabs() {
                      </div>
 
                      <div className="mt-4 flex gap-4 shrink-0">
-                        <button className="px-5 py-2 border border-hairline text-ink text-sm font-sans font-medium rounded-[4px] bg-paper">Save draft</button>
-                        <button className="px-5 py-2 bg-ink text-paper text-sm font-sans font-medium rounded-[4px]">Send for review</button>
+                        <SecondaryButton>Save draft</SecondaryButton>
+                        <PrimaryButton>Send for review</PrimaryButton>
                      </div>
                   </div>
                </div>

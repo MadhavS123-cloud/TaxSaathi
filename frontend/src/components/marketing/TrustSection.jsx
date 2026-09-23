@@ -16,7 +16,7 @@ export default function TrustSection() {
           </div>
 
           <div className="w-full md:w-2/3 grid grid-cols-1 sm:grid-cols-3 gap-8">
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 h-full">
               <ShieldCheck size={20} className="text-ink-muted" strokeWidth={1.5} />
               <div className="text-sm font-sans font-semibold text-ink">SA-230 Audit Logging</div>
               <p className="text-xs font-sans text-ink-muted leading-relaxed">
@@ -24,7 +24,7 @@ export default function TrustSection() {
               </p>
             </div>
             
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 h-full">
               <Database size={20} className="text-ink-muted" strokeWidth={1.5} />
               <div className="text-sm font-sans font-semibold text-ink">Localized Compute</div>
               <p className="text-xs font-sans text-ink-muted leading-relaxed">
@@ -32,7 +32,7 @@ export default function TrustSection() {
               </p>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 h-full">
               <BookOpen size={20} className="text-ink-muted" strokeWidth={1.5} />
               <div className="text-sm font-sans font-semibold text-ink">Current Tax Law</div>
               <p className="text-xs font-sans text-ink-muted leading-relaxed">

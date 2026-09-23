@@ -40,9 +40,9 @@ export default function Nav() {
 
         {/* Links */}
         <nav className="hidden md:flex items-center gap-8">
-          <a href="#pipelines" onClick={smoothScrollTo('pipelines')} className="text-sm font-sans text-ink-muted hover:text-ink transition-colors" data-cursor="interactive">Product</a>
-          <a href="#how-it-works" onClick={smoothScrollTo('how-it-works')} className="text-sm font-sans text-ink-muted hover:text-ink transition-colors" data-cursor="interactive">How it works</a>
-          <a href="#trust" onClick={smoothScrollTo('trust')} className="text-sm font-sans text-ink-muted hover:text-ink transition-colors" data-cursor="interactive">Security</a>
+          <a href="#pipelines" onClick={smoothScrollTo('pipelines')} className="text-base font-sans font-medium text-ink-muted hover:text-ink transition-colors" data-cursor="interactive">Product</a>
+          <a href="#how-it-works" onClick={smoothScrollTo('how-it-works')} className="text-base font-sans font-medium text-ink-muted hover:text-ink transition-colors" data-cursor="interactive">How it works</a>
+          <a href="#trust" onClick={smoothScrollTo('trust')} className="text-base font-sans font-medium text-ink-muted hover:text-ink transition-colors" data-cursor="interactive">Security</a>
         </nav>
 
         {/* Actions */}

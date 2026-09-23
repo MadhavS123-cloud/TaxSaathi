@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes.extract import router as extract_router
+from routes.reconciliation import router as reconciliation_router
 
 app = FastAPI(title="TaxSaathi API")
 
@@ -13,6 +14,7 @@ app.add_middleware(
 )
 
 app.include_router(extract_router)
+app.include_router(reconciliation_router)
 
 @app.get("/health")
 def health():
