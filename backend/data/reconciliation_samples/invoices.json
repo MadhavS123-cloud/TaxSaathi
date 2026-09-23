@@ -1,0 +1,7 @@
+[
+  {"invoice_number": "INV-1001", "total_amount": "25000.00", "invoice_date": "2026-08-01", "vendor_name": "Sharma Traders"},
+  {"invoice_number": "INV-1002", "total_amount": "9850.50", "invoice_date": "2026-08-03", "vendor_name": "Kapoor Textiles"},
+  {"invoice_number": "INV-1003", "total_amount": "150000.00", "invoice_date": "2026-08-05", "vendor_name": "Ashoka Logistics"},
+  {"invoice_number": "INV-1004", "total_amount": "4200.00", "invoice_date": "2026-08-06", "vendor_name": "Reddy Stationers"},
+  {"invoice_number": "INV-1005", "total_amount": "76000.00", "invoice_date": "2026-08-10", "vendor_name": "Verma Industrial Supplies"}
+]

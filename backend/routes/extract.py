@@ -20,6 +20,8 @@ async def extract_document(file: UploadFile = File(...)):
         data = extract_real_invoice(tmp_path)
         return {"success": True, "data": data}
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"success": False, "error": str(e)}
     finally:
         try:

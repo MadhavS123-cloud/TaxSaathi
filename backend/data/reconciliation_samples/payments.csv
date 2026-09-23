@@ -1,0 +1,6 @@
+Date,Amount,Reference,Narration,Party
+01-08-2026,25000.00,INV-1001,NEFT Payment for INV-1001,Sharma Traders
+03-08-2026,9850.50,,UPI/9876543210,Kapoor Textiles
+07-08-2026,150000.50,,RTGS transfer,Ashoka Logistics Pvt Ltd
+11-08-2026,76000.00,,NEFT settlement,Verma Industries
+15-08-2026,3000.00,,Random unmatched credit,Unknown Sender

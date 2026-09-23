@@ -9,19 +9,19 @@ export default function StatsStrip() {
           <div className="text-3xl md:text-4xl font-mono text-ink tracking-tight">
             <CountUp target={98} suffix="%" />
           </div>
-          <div className="text-xs font-sans text-ink-muted uppercase tracking-widest">Avg Match Rate</div>
+          <div className="text-sm font-sans font-semibold text-ink-muted">Avg match rate</div>
         </div>
         <div className="flex flex-col gap-2">
           <div className="text-3xl md:text-4xl font-mono text-ink tracking-tight">
             <CountUp target={12400} suffix="+" />
           </div>
-          <div className="text-xs font-sans text-ink-muted uppercase tracking-widest">Vouchers Reconciled</div>
+          <div className="text-sm font-sans font-semibold text-ink-muted">Vouchers reconciled</div>
         </div>
         <div className="flex flex-col gap-2">
           <div className="text-3xl md:text-4xl font-mono text-ink tracking-tight">
             O(<CountUp target={1} />)
           </div>
-          <div className="text-xs font-sans text-ink-muted uppercase tracking-widest">Reconciliation Engine</div>
+          <div className="text-sm font-sans font-semibold text-ink-muted">Reconciliation engine</div>
         </div>
       </div>
     </section>

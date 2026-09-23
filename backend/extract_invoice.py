@@ -1,16 +1,23 @@
 import os
 import json
 import mimetypes
+import logging
+import warnings
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from PIL import Image
+
+# Suppress background warnings
+logging.getLogger("google").setLevel(logging.ERROR)
+warnings.filterwarnings("ignore")
 
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
     raise ValueError("GEMINI_API_KEY not found in .env file.")
 
-genai.configure(api_key=api_key)
+client = genai.Client(api_key=api_key)
 
 REAL_INVOICE_PROMPT = """
 You are a senior Indian Chartered Accountant specializing in GST statutory audits and document forensics.
@@ -96,29 +103,46 @@ def extract_real_invoice(file_path: str):
         raise FileNotFoundError(f"File not found: {file_path}")
 
     print(f"\n[Processing Real Document] {file_path}")
-    model = genai.GenerativeModel("gemini-3.6-flash")
     mime_type, _ = mimetypes.guess_type(file_path)
+
+    config = types.GenerateContentConfig(response_mime_type="application/json")
 
     if mime_type and mime_type.startswith("image/"):
         with Image.open(file_path) as image:
-            response = model.generate_content([REAL_INVOICE_PROMPT, image])
+            response = client.models.generate_content(
+                model="gemini-3.6-flash",
+                contents=[REAL_INVOICE_PROMPT, image],
+                config=config
+            )
     elif file_path.lower().endswith(".pdf"):
-        uploaded_pdf = genai.upload_file(file_path, mime_type="application/pdf")
-        response = model.generate_content([REAL_INVOICE_PROMPT, uploaded_pdf])
+        uploaded_pdf = client.files.upload(file=file_path)
+        import time
+        while uploaded_pdf.state.name == "PROCESSING":
+            time.sleep(2)
+            uploaded_pdf = client.files.get(name=uploaded_pdf.name)
+        response = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=[REAL_INVOICE_PROMPT, uploaded_pdf],
+            config=config
+        )
     else:
-        with open(file_path, "rb") as f:
-            data = f.read()
-        response = model.generate_content([
-            REAL_INVOICE_PROMPT,
-            {"mime_type": mime_type or "image/jpeg", "data": data}
-        ])
+        uploaded_file = client.files.upload(file=file_path)
+        import time
+        while uploaded_file.state.name == "PROCESSING":
+            time.sleep(2)
+            uploaded_file = client.files.get(name=uploaded_file.name)
+        response = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=[REAL_INVOICE_PROMPT, uploaded_file],
+            config=config
+        )
 
     # --- TOKEN USAGE TRACKING ---
     input_tokens = response.usage_metadata.prompt_token_count
     output_tokens = response.usage_metadata.candidates_token_count
     total_tokens = response.usage_metadata.total_token_count
 
-    print("\n--- 💰 Token Usage Receipt ---")
+    print("\n--- Token Usage Receipt ---")
     print(f"Input Tokens (Prompt + Image): {input_tokens}")
     print(f"Output Tokens (JSON Result): {output_tokens}")
     print(f"Total Tokens Billed: {total_tokens}")
@@ -157,7 +181,8 @@ def extract_real_invoice(file_path: str):
         }
 
 if __name__ == "__main__":
-    folder = os.path.join("data", "sample_invoices")
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    folder = os.path.join(base_dir, "..", "data", "sample_invoices")
     supported_exts = (".png", ".jpg", ".jpeg", ".pdf", ".webp")
     valid_files = [f for f in os.listdir(folder) if f.lower().endswith(supported_exts)]
     
