@@ -16,10 +16,20 @@ db_dir = os.path.join("data", "chroma_db")
 client = chromadb.PersistentClient(path=db_dir)
 embedding_fn = embedding_functions.DefaultEmbeddingFunction()
 
-collection = client.get_collection(
-    name="indian_tax_laws",
-    embedding_function=embedding_fn
-)
+# Try to get collection, if it doesn't exist, create an empty one
+try:
+    collection = client.get_collection(
+        name="indian_tax_laws",
+        embedding_function=embedding_fn
+    )
+except Exception as e:
+    print(f"[WARNING] ChromaDB collection 'indian_tax_laws' not found. Creating empty collection...")
+    print(f"[WARNING] Error: {e}")
+    collection = client.get_or_create_collection(
+        name="indian_tax_laws",
+        embedding_function=embedding_fn
+    )
+    print(f"[INFO] Empty collection created. Please run chunk_corpus.py and embed_corpus.py to populate it.")
 
 ADVISORY_SYSTEM_PROMPT = """
 You are CA Tax Copilot, an expert AI assistant helping Indian Chartered Accountants.

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { api } from '../services/api';
 import ReconciliationPanel from '../components/reconciliation/ReconciliationPanel';
 
 export default function Reconciliation() {
@@ -13,24 +14,15 @@ export default function Reconciliation() {
     setSummary(null);
     setRows([]);
 
-    const formData = new FormData();
-    formData.append('invoice_file', invoiceFile);
-    formData.append('payment_file', paymentFile);
-
     try {
-      const response = await fetch('http://127.0.0.1:8000/reconciliation/run', {
-        method: 'POST',
-        body: formData,
-      });
+      const result = await api.reconcileLedger(invoiceFile, paymentFile);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Reconciliation failed on the server.');
+      if (result.error) {
+        throw new Error(result.error);
       }
 
-      const data = await response.json();
-      setSummary(data.summary);
-      setRows(data.rows);
+      setSummary(result.summary);
+      setRows(result.rows);
     } catch (err) {
       console.error("Reconciliation error:", err);
       setError(err.message || 'An unexpected error occurred while connecting to the API.');
