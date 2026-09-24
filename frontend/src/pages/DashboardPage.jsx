@@ -12,84 +12,66 @@ import NewCaseModal from '../components/dashboard/NewCaseModal';
 export default function DashboardPage() {
   const navigate = useNavigate();
 
-  // 1. Cases State (Defaults to empty array, persistent via localStorage)
-  const [cases, setCases] = useState(() => {
-    try {
-      const saved = localStorage.getItem('taxsaathi_cases');
-      return saved !== null ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  // 1. Cases State (Defaults to empty array, persistent via API)
+  const [cases, setCases] = useState([]);
 
-  // 2. Activity Feed State (Defaults to empty array, persistent via localStorage)
-  const [activities, setActivities] = useState(() => {
-    try {
-      const saved = localStorage.getItem('taxsaathi_activities');
-      return saved !== null ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  // 2. Activity Feed State (Defaults to empty array, persistent via API)
+  const [activities, setActivities] = useState([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchDashboardData = async () => {
     try {
-      localStorage.setItem('taxsaathi_cases', JSON.stringify(cases));
+      const [casesRes, activitiesRes] = await Promise.all([
+        fetch('http://localhost:8000/cases'),
+        fetch('http://localhost:8000/activities')
+      ]);
+      if (casesRes.ok) setCases(await casesRes.json());
+      if (activitiesRes.ok) setActivities(await activitiesRes.json());
     } catch (e) {
-      console.error('Failed to save cases to localStorage', e);
+      console.error("Failed to fetch dashboard data:", e);
+    } finally {
+      setLoading(false);
     }
-  }, [cases]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('taxsaathi_activities', JSON.stringify(activities));
-    } catch (e) {
-      console.error('Failed to save activities to localStorage', e);
-    }
-  }, [activities]);
-
-  const handleCreateCase = (newCaseData) => {
-    const nextNum = cases.length + 1;
-    const caseId = `CAS-2024-${String(nextNum).padStart(3, '0')}`;
-    
-    const now = new Date();
-    const dateStr = now.toISOString().slice(0, 10);
-    const timeStr = now.toTimeString().slice(0, 5);
-    const lastUpdated = `${dateStr} ${timeStr}`;
-
-    const newCase = {
-      id: caseId,
-      client: newCaseData.client,
-      scope: newCaseData.scope,
-      gstin: newCaseData.gstin,
-      status: newCaseData.status,
-      lastUpdated,
-      reconciliation: newCaseData.reconciliation
-    };
-
-    setCases((prev) => [newCase, ...prev]);
-
-    // Log Activity
-    const newActivity = {
-      id: Date.now(),
-      type: 'upload',
-      client: newCaseData.client,
-      description: `New engagement initiated (${newCaseData.scope})`,
-      timestamp: 'Just now'
-    };
-    setActivities((prev) => [newActivity, ...prev]);
   };
 
-  const handleClearAll = () => {
-    setCases([]);
-    setActivities([]);
-    localStorage.removeItem('taxsaathi_cases');
-    localStorage.removeItem('taxsaathi_activities');
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const handleCreateCase = async (newCaseData) => {
+    try {
+      const response = await fetch('http://localhost:8000/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client: newCaseData.client,
+          scope: newCaseData.scope,
+          gstin: newCaseData.gstin,
+          status: newCaseData.status,
+          reconciliation: newCaseData.reconciliation
+        })
+      });
+      if (response.ok) {
+        await fetchDashboardData(); // Refresh list to get real ID and logs
+      }
+    } catch (e) {
+      console.error("Failed to create case:", e);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await fetch('http://localhost:8000/cases', { method: 'DELETE' });
+      setCases([]);
+      setActivities([]);
+    } catch (e) {
+      console.error("Failed to clear cases:", e);
+    }
   };
 
   // Filtered cases

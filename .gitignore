@@ -5,12 +5,6 @@ env/
 __pycache__/
 *.pyc
 
-# Data & Corpora
-# (Uncomment the lines below if you want to avoid pushing the actual PDFs/JSONs and just keep the code in Git)
-# data/raw_corpus/*.pdf
-# data/raw_corpus/*.html
-# data/processed_corpus/*.json
-
 # IDEs and OS files
 .vscode/
 .idea/
