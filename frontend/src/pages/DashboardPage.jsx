@@ -12,6 +12,7 @@ import NewCaseModal from '../components/dashboard/NewCaseModal';
 export default function DashboardPage() {
   const navigate = useNavigate();
 
+<<<<<<< HEAD
   // 1. Cases State (Defaults to empty array, persistent via localStorage)
   const [cases, setCases] = useState(() => {
     try {
@@ -31,11 +32,19 @@ export default function DashboardPage() {
       return [];
     }
   });
+=======
+  // 1. Cases State (Defaults to empty array, persistent via API)
+  const [cases, setCases] = useState([]);
+
+  // 2. Activity Feed State (Defaults to empty array, persistent via API)
+  const [activities, setActivities] = useState([]);
+>>>>>>> 3897d796505b0e45bd4a7ccf08ec1fb22351e79b
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
+<<<<<<< HEAD
 
   useEffect(() => {
     try {
@@ -90,6 +99,58 @@ export default function DashboardPage() {
     setActivities([]);
     localStorage.removeItem('taxsaathi_cases');
     localStorage.removeItem('taxsaathi_activities');
+=======
+  const [loading, setLoading] = useState(true);
+
+  const fetchDashboardData = async () => {
+    try {
+      const [casesRes, activitiesRes] = await Promise.all([
+        fetch('http://localhost:8000/cases'),
+        fetch('http://localhost:8000/activities')
+      ]);
+      if (casesRes.ok) setCases(await casesRes.json());
+      if (activitiesRes.ok) setActivities(await activitiesRes.json());
+    } catch (e) {
+      console.error("Failed to fetch dashboard data:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const handleCreateCase = async (newCaseData) => {
+    try {
+      const response = await fetch('http://localhost:8000/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client: newCaseData.client,
+          scope: newCaseData.scope,
+          gstin: newCaseData.gstin,
+          status: newCaseData.status,
+          reconciliation: newCaseData.reconciliation
+        })
+      });
+      if (response.ok) {
+        await fetchDashboardData(); // Refresh list to get real ID and logs
+      }
+    } catch (e) {
+      console.error("Failed to create case:", e);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await fetch('http://localhost:8000/cases', { method: 'DELETE' });
+      setCases([]);
+      setActivities([]);
+    } catch (e) {
+      console.error("Failed to clear cases:", e);
+    }
+>>>>>>> 3897d796505b0e45bd4a7ccf08ec1fb22351e79b
   };
 
   // Filtered cases
