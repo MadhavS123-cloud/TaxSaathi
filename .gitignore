@@ -9,3 +9,7 @@ __pycache__/
 .vscode/
 .idea/
 .DS_Store
+
+# Database files (exclude root-level data, keep backend embedded ChromaDB)
+backend/taxsaathi.db
+/data/chroma_db/

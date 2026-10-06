@@ -2,16 +2,29 @@ import os
 import json
 import chromadb
 from chromadb.utils import embedding_functions
+from dotenv import load_dotenv
 
-print(">>> Starting local embedding pipeline...")
+load_dotenv()
+
+print(">>> Starting embedding pipeline with Google Gemini embeddings...")
 
 # 1. Initialize persistent ChromaDB storage
 db_dir = os.path.join("data", "chroma_db")
 print(f">>> Initializing ChromaDB at: {db_dir}")
 client = chromadb.PersistentClient(path=db_dir)
 
-# 2. Configure high-speed local embedding function
-embedding_fn = embedding_functions.DefaultEmbeddingFunction()
+# 2. Configure Google Gemini embedding function (same as advisory.py)
+api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    print("ERROR: GEMINI_API_KEY not found in .env file")
+    print("Falling back to DefaultEmbeddingFunction (local)")
+    embedding_fn = embedding_functions.DefaultEmbeddingFunction()
+else:
+    print(f">>> Using Google Gemini embedding-001 model")
+    embedding_fn = embedding_functions.GoogleGenerativeAiEmbeddingFunction(
+        api_key=api_key,
+        model_name="models/embedding-001"
+    )
 
 collection = client.get_or_create_collection(
     name="indian_tax_laws",
