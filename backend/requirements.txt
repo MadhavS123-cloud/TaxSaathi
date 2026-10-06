@@ -5,6 +5,10 @@ python-multipart==0.0.32
 pydantic==2.13.5
 python-dotenv==1.2.3
 
+# Database
+sqlalchemy
+psycopg2-binary
+
 # Google AI APIs
 google-generativeai==0.8.6
 google-genai==2.25.0
