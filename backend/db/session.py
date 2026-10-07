@@ -7,27 +7,29 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    DATABASE_URL = "sqlite:///./taxsaathi.db" # fallback to sqlite for local dev
+    DATABASE_URL = "sqlite:///./taxsaathi.db"  # fallback to sqlite for local dev
 else:
-    # Force psycopg v3 dialect for PostgreSQL
+    # Ensure proper SSL mode and psycopg2 dialect for Supabase
     if DATABASE_URL.startswith("postgresql://"):
-        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+        # Convert to psycopg2 dialect and add SSL
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+        if "sslmode=" not in DATABASE_URL:
+            DATABASE_URL += "?sslmode=require"
 
-# Configure connection arguments to force IPv4 and improve reliability
+# Configure connection with pooling and timeouts
 connect_args = {}
-if DATABASE_URL.startswith("postgresql+psycopg://"):
+if DATABASE_URL.startswith("postgresql+psycopg2://"):
     connect_args = {
-        "connect_timeout": 10,  # 10 second connection timeout
-        "options": "-c jit=off",  # Disable JIT compilation for faster connection
+        "connect_timeout": 10,
     }
 
 engine = create_engine(
     DATABASE_URL,
     connect_args=connect_args,
-    pool_pre_ping=True,  # Verify connections before using them
-    pool_size=5,  # Connection pool size
-    max_overflow=10,  # Allow up to 10 connections beyond pool_size
-    pool_recycle=3600,  # Recycle connections after 1 hour
+    pool_pre_ping=True,  # Verify connections before using
+    pool_size=5,
+    max_overflow=10,
+    pool_recycle=3600,
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
