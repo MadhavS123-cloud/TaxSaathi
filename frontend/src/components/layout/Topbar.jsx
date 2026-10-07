@@ -1,6 +1,6 @@
 import React from 'react';
 import { Search, LogOut } from 'lucide-react';
-import { useLocation, matchPath } from 'react-router-dom';
+import { useLocation, matchPath, useNavigate } from 'react-router-dom';
 
 const PATH_MAP = {
   '/app/dashboard': 'Case Dashboard',
@@ -15,6 +15,7 @@ const PATH_MAP = {
 
 export default function Topbar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentModule = PATH_MAP[location.pathname] || 'Module';
   
   const isCaseUploadRoute = matchPath('/cases/:caseId/upload', location.pathname);
@@ -72,7 +73,11 @@ export default function Topbar() {
               <span className="text-ink-muted text-[10px] font-sans">Partner</span>
             </div>
           </div>
-          <button className="text-ink-muted hover:text-ink transition-colors ml-2">
+          <button 
+            onClick={() => navigate('/')}
+            className="text-ink-muted hover:text-ink transition-colors ml-2"
+            title="Log out"
+          >
             <LogOut size={18} strokeWidth={1.5} />
           </button>
         </div>

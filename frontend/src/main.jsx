@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { ErrorBoundary } from './components/ErrorBoundary.jsx';
 import App from './App.jsx';
 import './index.css';
 
@@ -9,7 +10,9 @@ if (rootElement) {
   createRoot(rootElement).render(
     <React.StrictMode>
       <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "missing-client-id"}>
-        <App />
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
       </GoogleOAuthProvider>
     </React.StrictMode>
   );

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config/api';
 import { LayoutGrid, List, CheckCircle, AlertCircle, Clock, Users, Search, ChevronDown, Calendar, Trash2 } from 'lucide-react';
 import MetricCard from '../components/ui/MetricCard';
 import DataTable from '../components/ui/DataTable';
@@ -12,106 +13,49 @@ import NewCaseModal from '../components/dashboard/NewCaseModal';
 export default function DashboardPage() {
   const navigate = useNavigate();
 
-<<<<<<< HEAD
-  // 1. Cases State (Defaults to empty array, persistent via localStorage)
-  const [cases, setCases] = useState(() => {
-    try {
-      const saved = localStorage.getItem('taxsaathi_cases');
-      return saved !== null ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  // 2. Activity Feed State (Defaults to empty array, persistent via localStorage)
-  const [activities, setActivities] = useState(() => {
-    try {
-      const saved = localStorage.getItem('taxsaathi_activities');
-      return saved !== null ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-=======
   // 1. Cases State (Defaults to empty array, persistent via API)
   const [cases, setCases] = useState([]);
 
   // 2. Activity Feed State (Defaults to empty array, persistent via API)
   const [activities, setActivities] = useState([]);
->>>>>>> 3897d796505b0e45bd4a7ccf08ec1fb22351e79b
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
-<<<<<<< HEAD
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('taxsaathi_cases', JSON.stringify(cases));
-    } catch (e) {
-      console.error('Failed to save cases to localStorage', e);
-    }
-  }, [cases]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('taxsaathi_activities', JSON.stringify(activities));
-    } catch (e) {
-      console.error('Failed to save activities to localStorage', e);
-    }
-  }, [activities]);
-
-  const handleCreateCase = (newCaseData) => {
-    const nextNum = cases.length + 1;
-    const caseId = `CAS-2024-${String(nextNum).padStart(3, '0')}`;
-    
-    const now = new Date();
-    const dateStr = now.toISOString().slice(0, 10);
-    const timeStr = now.toTimeString().slice(0, 5);
-    const lastUpdated = `${dateStr} ${timeStr}`;
-
-    const newCase = {
-      id: caseId,
-      client: newCaseData.client,
-      scope: newCaseData.scope,
-      gstin: newCaseData.gstin,
-      status: newCaseData.status,
-      lastUpdated,
-      reconciliation: newCaseData.reconciliation
-    };
-
-    setCases((prev) => [newCase, ...prev]);
-
-    // Log Activity
-    const newActivity = {
-      id: Date.now(),
-      type: 'upload',
-      client: newCaseData.client,
-      description: `New engagement initiated (${newCaseData.scope})`,
-      timestamp: 'Just now'
-    };
-    setActivities((prev) => [newActivity, ...prev]);
-  };
-
-  const handleClearAll = () => {
-    setCases([]);
-    setActivities([]);
-    localStorage.removeItem('taxsaathi_cases');
-    localStorage.removeItem('taxsaathi_activities');
-=======
   const [loading, setLoading] = useState(true);
+  const [wakingUp, setWakingUp] = useState(false);
+  const [error, setError] = useState(null);
 
   const fetchDashboardData = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      
+      if (!API_BASE_URL) {
+        setError("Backend not connected. VITE_API_BASE_URL is missing.");
+        setLoading(false);
+        return;
+      }
+
+      // If request takes longer than 3s, assume Render cold start
+      const wakingTimeout = setTimeout(() => setWakingUp(true), 3000);
+      
       const [casesRes, activitiesRes] = await Promise.all([
-        fetch('http://localhost:8000/cases'),
-        fetch('http://localhost:8000/activities')
+        fetch(`${API_BASE_URL}/cases`),
+        fetch(`${API_BASE_URL}/activities`)
       ]);
-      if (casesRes.ok) setCases(await casesRes.json());
-      if (activitiesRes.ok) setActivities(await activitiesRes.json());
+      clearTimeout(wakingTimeout);
+      setWakingUp(false);
+      
+      if (!casesRes.ok || !activitiesRes.ok) throw new Error('Failed to fetch data');
+      
+      setCases(await casesRes.json());
+      setActivities(await activitiesRes.json());
     } catch (e) {
       console.error("Failed to fetch dashboard data:", e);
+      setError("Unable to connect to the server. It may be waking up or currently unavailable.");
+      setWakingUp(false);
     } finally {
       setLoading(false);
     }
@@ -122,8 +66,12 @@ export default function DashboardPage() {
   }, []);
 
   const handleCreateCase = async (newCaseData) => {
+    if (!API_BASE_URL) {
+      alert("Backend not connected.");
+      return;
+    }
     try {
-      const response = await fetch('http://localhost:8000/cases', {
+      const response = await fetch(`${API_BASE_URL}/cases`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -136,21 +84,27 @@ export default function DashboardPage() {
       });
       if (response.ok) {
         await fetchDashboardData(); // Refresh list to get real ID and logs
+      } else {
+        alert("Failed to create case.");
       }
     } catch (e) {
       console.error("Failed to create case:", e);
+      alert("Error connecting to server.");
     }
   };
 
   const handleClearAll = async () => {
+    if (!API_BASE_URL) return;
     try {
-      await fetch('http://localhost:8000/cases', { method: 'DELETE' });
-      setCases([]);
-      setActivities([]);
+      const response = await fetch(`${API_BASE_URL}/cases`, { method: 'DELETE' });
+      if (response.ok) {
+        setCases([]);
+        setActivities([]);
+      }
     } catch (e) {
       console.error("Failed to clear cases:", e);
+      alert("Error clearing cases.");
     }
->>>>>>> 3897d796505b0e45bd4a7ccf08ec1fb22351e79b
   };
 
   // Filtered cases
@@ -226,6 +180,21 @@ export default function DashboardPage() {
   return (
     <div className="max-w-[1400px] mx-auto flex flex-col gap-8 pb-12">
       
+      {wakingUp && !error && (
+        <div className="bg-amber-flag/10 border border-amber-flag text-amber-flag p-4 rounded mb-4">
+          <p className="text-sm font-medium">Server is waking up from inactivity...</p>
+          <p className="text-xs">Render spins down free servers after inactivity. This usually takes 30-50 seconds. Please wait.</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-rust/10 border border-rust text-rust p-4 rounded mb-4">
+          <p className="text-sm font-medium">Error loading data</p>
+          <p className="text-xs">{error}</p>
+          <PrimaryButton className="mt-2 text-xs py-1" onClick={fetchDashboardData}>Retry</PrimaryButton>
+        </div>
+      )}
+
       {/* 1. Page Header Row */}
       <div className="flex items-start justify-between">
         <div>

@@ -29,7 +29,7 @@ export default {
         },
       },
       fontFamily: {
-        serif: ['Fraunces', 'Source Serif 4', 'serif'],
+        serif: ['P22 Mackinac W01 Book', 'Georgia', 'serif'],
         sans: ['Inter', 'Public Sans', 'sans-serif'],
         mono: ['"JetBrains Mono"', '"IBM Plex Mono"', 'monospace'],
       },
