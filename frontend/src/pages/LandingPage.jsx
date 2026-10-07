@@ -164,13 +164,13 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white font-sans text-[#191919] relative overflow-x-hidden z-0">
       <BrandWatermark opacity={0.03} position="bottom-right" />
       
-      {/* Custom Transparent Nav matching Boomerang layout but with CA Tax Copilot text */}
+      {/* Custom Transparent Nav matching Boomerang layout but with TaxSaathi text */}
       <nav className="fixed top-0 left-0 right-0 z-50 px-6 sm:px-10 md:px-14 py-4 sm:py-5 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2.5">
           <div className="w-6 h-6 bg-[#191919] text-white flex items-center justify-center font-serif font-bold text-xs rounded-sm">
             TS
           </div>
-          <span className="font-semibold text-base tracking-tight text-[#191919]">CA Tax Copilot</span>
+          <span className="font-semibold text-base tracking-tight text-[#191919]">TaxSaathi</span>
         </Link>
         
         <div className="hidden md:flex items-center gap-8">
@@ -203,7 +203,7 @@ export default function LandingPage() {
       </nav>
 
       <main>
-        {/* Full Viewport Boomerang Hero with CA Tax Copilot text */}
+        {/* Full Viewport Boomerang Hero with TaxSaathi text */}
         <section className="relative flex flex-col items-center overflow-hidden h-screen">
           <BoomerangVideoBg />
           

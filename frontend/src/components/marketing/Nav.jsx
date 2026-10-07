@@ -35,7 +35,7 @@ export default function Nav() {
           <div className="w-8 h-8 bg-ink text-paper flex items-center justify-center font-serif font-bold text-lg rounded-[2px] transition-transform group-hover:scale-105">
             TS
           </div>
-          <span className="text-ink font-serif text-lg tracking-wide">CA Tax Copilot</span>
+          <span className="text-ink font-serif text-lg tracking-wide">TaxSaathi</span>
         </Link>
 
         {/* Links */}

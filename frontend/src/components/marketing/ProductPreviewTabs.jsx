@@ -21,7 +21,7 @@ const AppWrapper = ({ activeTab, children }) => {
     <div className="flex w-full h-full bg-paper text-left text-ink pointer-events-none">
        <div className="hidden md:flex w-[180px] bg-taupe border-r border-hairline flex-col pt-5 shrink-0">
           <div className="px-5 mb-6">
-             <div className="w-7 h-7 bg-ink text-paper rounded-[2px] flex items-center justify-center font-serif font-bold text-xs">CA</div>
+             <div className="w-7 h-7 bg-ink text-paper rounded-[2px] flex items-center justify-center font-serif font-bold text-xs">TS</div>
           </div>
           <div className="flex flex-col gap-0.5">
              <SidebarItem>Case dashboard</SidebarItem>

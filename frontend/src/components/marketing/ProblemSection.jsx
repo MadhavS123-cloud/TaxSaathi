@@ -10,7 +10,7 @@ export default function ProblemSection() {
         </h2>
         <p className="text-lg font-sans text-ink-muted leading-relaxed max-w-2xl mx-auto">
           Manual voucher matching and data entry are the bottlenecks of every tax season. 
-          CA Tax Copilot transforms raw documents into reconciled ledgers instantly, letting your team focus on high-value advisory.
+          TaxSaathi transforms raw documents into reconciled ledgers instantly, letting your team focus on high-value advisory.
         </p>
       </RevealOnScroll>
     </section>

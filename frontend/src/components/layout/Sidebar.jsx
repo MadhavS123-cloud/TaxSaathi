@@ -27,9 +27,9 @@ export default function Sidebar() {
     <aside className="w-[240px] h-screen bg-taupe border-r border-hairline flex flex-col fixed left-0 top-0">
       <div className="p-6 flex items-center gap-3">
         <div className="w-8 h-8 bg-ink text-paper flex items-center justify-center font-serif font-bold text-lg rounded-[2px]">
-          CTC
+          TS
         </div>
-        <h1 className="text-ink font-serif text-lg tracking-wide">CA Tax Copilot</h1>
+        <h1 className="text-ink font-serif text-lg tracking-wide">TaxSaathi</h1>
       </div>
       
       <nav className="flex-1 mt-2 flex flex-col gap-0.5">
