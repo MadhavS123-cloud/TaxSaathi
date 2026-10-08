@@ -7,7 +7,7 @@ python-dotenv==1.2.3
 
 # Database
 sqlalchemy==2.0.54
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.13
 alembic==1.14.1
 
 # Google AI APIs
@@ -53,7 +53,7 @@ filelock==4.0.3
 flatbuffers==25.12.19
 frozenlist==1.8.0
 fsspec==2026.9.0
-google-api-core==2.25.2
+google-api-core==2.23.0
 google-api-python-client==2.200.0
 google-ai-generativelanguage==0.6.15
 google-auth==2.58.0
