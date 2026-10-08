@@ -20,7 +20,7 @@ origins = [
     "http://127.0.0.1:5173",
     "http://localhost:5174",
     "http://127.0.0.1:5174",
-    "https://ca-tax-copilot.vercel.app",
+    "https://tax-saathi-gamma.vercel.app/",
 ]
 frontend_url = os.getenv("FRONTEND_URL")
 if frontend_url:
