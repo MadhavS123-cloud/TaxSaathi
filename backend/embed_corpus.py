@@ -28,14 +28,10 @@ def build_embedding_function(api_key: str):
     from chromadb.utils import embedding_functions
 
     if not api_key:
-        logger.warning("GEMINI_API_KEY not set. Falling back to DefaultEmbeddingFunction (local, slower).")
-        return embedding_functions.DefaultEmbeddingFunction()
-
-    logger.info("Using Google Gemini embedding-001 model.")
-    return embedding_functions.GoogleGenerativeAiEmbeddingFunction(
-        api_key=api_key,
-        model_name="models/embedding-001"
-    )
+        logger.warning("GEMINI_API_KEY not set.")
+    
+    logger.info("Using local Chroma DefaultEmbeddingFunction to maintain 384-dimension compatibility.")
+    return embedding_functions.DefaultEmbeddingFunction()
 
 
 def load_chunks(processed_dir: str) -> tuple[list, list, list]:
