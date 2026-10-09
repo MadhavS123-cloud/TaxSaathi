@@ -110,7 +110,7 @@ def extract_real_invoice(file_path: str):
     if mime_type and mime_type.startswith("image/"):
         with Image.open(file_path) as image:
             response = client.models.generate_content(
-                model="gemini-3.6-flash",
+                model="gemini-2.0-flash",
                 contents=[REAL_INVOICE_PROMPT, image],
                 config=config
             )
@@ -121,7 +121,7 @@ def extract_real_invoice(file_path: str):
             time.sleep(2)
             uploaded_pdf = client.files.get(name=uploaded_pdf.name)
         response = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model="gemini-2.0-flash",
             contents=[REAL_INVOICE_PROMPT, uploaded_pdf],
             config=config
         )
@@ -132,7 +132,7 @@ def extract_real_invoice(file_path: str):
             time.sleep(2)
             uploaded_file = client.files.get(name=uploaded_file.name)
         response = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model="gemini-2.0-flash",
             contents=[REAL_INVOICE_PROMPT, uploaded_file],
             config=config
         )
