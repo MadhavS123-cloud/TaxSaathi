@@ -41,7 +41,7 @@ if not api_key:
 # ---------------------------------------------------------------------------
 # 1.  LangChain LLM  (replaces genai.GenerativeModel)
 # ---------------------------------------------------------------------------
-LLM_MODEL_NAME = "gemini-2.0-flash"
+LLM_MODEL_NAME = "gemini-3.8-flash"
 
 llm = ChatGoogleGenerativeAI(
     model=LLM_MODEL_NAME,
@@ -57,16 +57,20 @@ llm = ChatGoogleGenerativeAI(
 _CHROMA_DIR = os.path.join("data", "chroma_db")
 _COLLECTION_NAME = "indian_tax_laws"
 
-# Use Google's embedding model so vectors are compatible with the stored index.
-# Falls back to a no-op placeholder if the collection is empty.
+class LocalChromaEmbedder:
+    def __init__(self):
+        from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+        self.ef = DefaultEmbeddingFunction()
+    def embed_documents(self, texts):
+        return self.ef(texts)
+    def embed_query(self, text):
+        return self.ef([text])[0]
+
+# Use the local Chroma default model to match the 384-dimension database
 try:
-    embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001",
-        google_api_key=api_key,
-    )
     vectorstore = Chroma(
         collection_name=_COLLECTION_NAME,
-        embedding_function=embeddings,
+        embedding_function=LocalChromaEmbedder(),
         persist_directory=_CHROMA_DIR,
     )
     logger.info("[ChromaDB] Connected to collection '%s'", _COLLECTION_NAME)
@@ -389,6 +393,10 @@ def ask_tax_copilot(query: str, top_k: int = 5) -> dict:
 # 7.  Quick CLI test
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
+    import sys
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    
     sample_query = (
         "What is the standard deduction limit under salary in the "
         "new tax regime versus other cases?"
