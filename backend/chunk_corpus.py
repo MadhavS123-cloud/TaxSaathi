@@ -30,8 +30,14 @@ try:
 except ImportError:
     pdfplumber = None
 
-RAW_DIR = os.path.join("data", "raw_corpus")
-OUT_DIR = os.path.join("data", "processed_corpus")
+def _resolve_dir(subpath: str) -> str:
+    for candidate in [subpath, os.path.join("..", subpath)]:
+        if os.path.exists(candidate):
+            return candidate
+    return subpath
+
+RAW_DIR = _resolve_dir(os.path.join("data", "raw_corpus"))
+OUT_DIR = _resolve_dir(os.path.join("data", "processed_corpus"))
 
 # Max characters per chunk before we split further by sub-section.
 # Keeps embeddings focused; very long sections get broken down but
@@ -78,8 +84,7 @@ def pdf_to_text(path: str) -> str:
 #   "Section 43A. Procedure for furnishing return..."
 # Deliberately requires the literal word "Section" so that amendment
 # footnote markers like "3. Substituted for ..." or "11. Omitted (w.e.f. ...)"
-# are NOT mistaken for section headers (a major source of noise in these
-# government HTML documents, where every footnote is also a numbered line).
+# are NOT mistaken for section headers.
 SECTION_PATTERN = re.compile(
     r"^Section\s+(\d{1,4}[A-Z]?)\.?\s*(.*)$"
 )
@@ -88,13 +93,20 @@ INCOME_TAX_SECTION_PATTERN = re.compile(
     r"^(\d+[a-zA-Z]?)\.\s+(.*)$"
 )
 
-# Some sections in this corpus appear as a bare "16." at the very start of
-# a paragraph with no "Section" word (mostly Income Tax Act PDF). We detect
-# these separately and more strictly: number must be followed by a title
-# that looks like a heading (Title Case words, ends without amendment
-# citation phrases like "w.e.f." "Notification" "Act, 20" etc).
+# Matches a section title line: short, title-case, not a footnote
+SECTION_TITLE_PATTERN = re.compile(
+    r"^[A-Z][A-Za-z\s,\-\'\(\)]{3,80}$"
+)
+
 FOOTNOTE_HINT_PATTERN = re.compile(
     r"\b(Substituted|Inserted|Omitted|Notification|w\.e\.f\.|Brought into force|Act,\s*\d{4})\b",
+    re.IGNORECASE,
+)
+
+# Patterns that indicate the current line is NOT a meaningful section title
+# (common PDF extraction artifacts)
+ARTIFACT_HINT_PATTERN = re.compile(
+    r"^(and upto|or more|per cent|rupees|\d+[,\s]*\d+|page \d+)",
     re.IGNORECASE,
 )
 
@@ -105,18 +117,17 @@ def split_into_sections(text: str, act_name: str, source_file: str) -> list:
     current = None
     is_income_tax = "income_tax" in source_file.lower()
     previous_valid_line = ""
+    pending_title_lookup = False  # True right after a CGST section header line
 
     for raw_line in lines:
         line = raw_line.strip()
-        
+
         if is_income_tax:
             match = INCOME_TAX_SECTION_PATTERN.match(line)
         else:
             match = SECTION_PATTERN.match(line)
 
-        # Reject false positives: a line matching "Section N. ..." pattern
-        # but whose title-portion looks like an amendment footnote (rare,
-        # but happens when footnote text itself contains the word "Section").
+        # Reject false positives
         is_real_section = bool(match) and not FOOTNOTE_HINT_PATTERN.search(
             match.group(2)[:80] if match else ""
         )
@@ -124,14 +135,22 @@ def split_into_sections(text: str, act_name: str, source_file: str) -> list:
         if is_real_section:
             if current:
                 sections.append(current)
-                
+
             if is_income_tax:
                 section_number = match.group(1)
-                section_title = previous_valid_line.strip().rstrip(".-").strip()
+                # For IT Act, the title is in the match group itself (e.g. "4. Charge of Income-tax")
+                inline_title = match.group(2).strip().rstrip(".-").strip()
+                # Reject PDF garbage titles
+                if ARTIFACT_HINT_PATTERN.search(inline_title):
+                    inline_title = ""
+                section_title = inline_title
             else:
-                section_number, section_title = match.groups()
-                section_title = section_title.strip().rstrip(".-").strip()
-                
+                # CGST/IGST: "Section 16" appears alone; the real title is on the NEXT non-empty line
+                section_number, inline_title = match.groups()
+                inline_title = inline_title.strip().rstrip(".-").strip()
+                section_title = inline_title  # may be overwritten by next line below
+                pending_title_lookup = True
+
             current = {
                 "act": act_name,
                 "section_number": section_number,
@@ -140,19 +159,53 @@ def split_into_sections(text: str, act_name: str, source_file: str) -> list:
                 "text": raw_line.strip() + "\n",
             }
         else:
+            # For CGST/IGST: if this is the first content line after a section header,
+            # use it as the section title if it looks like one.
+            if pending_title_lookup and current and line:
+                if (
+                    not FOOTNOTE_HINT_PATTERN.search(line)
+                    and not ARTIFACT_HINT_PATTERN.search(line)
+                    and len(line) < 120
+                    and not current["section_title"]
+                ):
+                    current["section_title"] = line.rstrip(".\n").strip()
+                pending_title_lookup = False
+
             if current:
                 current["text"] += raw_line + "\n"
-            # else: line appears before the first detected section
-            # (preamble, table of contents, or a footnote before any
-            # real section has been found) -> skipped
 
         if line:
             previous_valid_line = line
+            if not is_real_section:
+                pending_title_lookup = False  # reset after non-section real content
 
     if current:
         sections.append(current)
 
-    return sections
+    # Filter out Table of Contents stubs:
+    # 1. Reject chunks with less than 150 characters that have only 1-2 lines (just section header + title).
+    # 2. When duplicate section numbers appear (e.g. TOC stub vs substantive section body),
+    #    keep the substantive section and retain the best section title.
+    valid_sections = []
+    seen = {}
+    for s in sections:
+        text = s["text"].strip()
+        lines = [l for l in text.split("\n") if l.strip()]
+        if len(text) < 150 and len(lines) <= 2:
+            continue
+
+        sec_key = (s["act"], s["section_number"])
+        if sec_key in seen:
+            prev_idx = seen[sec_key]
+            if len(text) > len(valid_sections[prev_idx]["text"]):
+                if not s.get("section_title") and valid_sections[prev_idx].get("section_title"):
+                    s["section_title"] = valid_sections[prev_idx]["section_title"]
+                valid_sections[prev_idx] = s
+        else:
+            seen[sec_key] = len(valid_sections)
+            valid_sections.append(s)
+
+    return valid_sections
 
 
 def split_oversized_section(section: dict) -> list:
