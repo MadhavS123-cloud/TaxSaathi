@@ -77,16 +77,30 @@ def run():
     """Main entry point for the embedding pipeline."""
     import chromadb
 
+    def _resolve_dir(subpath: str) -> str:
+        for candidate in [subpath, os.path.join("..", subpath)]:
+            if os.path.exists(candidate):
+                return candidate
+        return subpath
+
     api_key = os.getenv("GEMINI_API_KEY")
     db_dir = os.path.join("data", "chroma_db")
-    processed_dir = os.path.join("data", "processed_corpus")
+    processed_dir = _resolve_dir(os.path.join("data", "processed_corpus"))
 
     logger.info("Starting embedding pipeline...")
     logger.info("ChromaDB directory: %s", db_dir)
+    logger.info("Processed corpus directory: %s", processed_dir)
 
     # 1. Initialize ChromaDB
     client = chromadb.PersistentClient(path=db_dir)
     embedding_fn = build_embedding_function(api_key)
+
+    # Recreate collection to purge any previous stale Table of Contents stubs
+    try:
+        client.delete_collection("indian_tax_laws")
+        logger.info("Purged previous 'indian_tax_laws' collection.")
+    except Exception:
+        pass
 
     collection = client.get_or_create_collection(
         name="indian_tax_laws",

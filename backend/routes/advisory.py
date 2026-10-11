@@ -58,6 +58,9 @@ async def get_tax_advisory(request: AdvisoryRequest):
                     act=sec.get("act", ""),
                     section_number=sec.get("section_number", ""),
                     section_title=sec.get("section_title", ""),
+                    subsection=sec.get("subsection", ""),
+                    excerpt=sec.get("excerpt", ""),
+                    source_file=sec.get("source_file", ""),
                 ))
             except Exception as e:
                 logger.warning(f"Failed to build Citation object from {sec}: {e}")
@@ -81,13 +84,16 @@ async def get_tax_advisory(request: AdvisoryRequest):
         if parsed.get("is_insufficient_context", False):
             notes = (
                 "The retrieved statutory context did not contain sufficient "
-                "information for this query. Please verify with official tax "
-                "documentation or consult a qualified CA."
+                "information for this query. Verify directly with the official "
+                "bare act, CBDT/CBIC circulars, or GST Council notifications. "
+                "Check whether the required provision is currently indexed in "
+                "the knowledge base."
             )
         elif is_low_confidence:
             notes = (
-                "This answer has lower confidence. Please verify with official "
-                "tax documentation or consult a qualified CA."
+                "This answer is based on partial context. "
+                "Cross-check the cited provisions against the official bare act "
+                "before advising clients."
             )
 
         answer_text = result.get("answer", "")
