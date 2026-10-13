@@ -10,7 +10,7 @@ export default function Footer() {
             <div className="w-6 h-6 bg-ink text-paper flex items-center justify-center font-serif font-bold text-sm rounded-sm">
               TS
             </div>
-            <span className="text-ink font-serif tracking-wide">CA Tax Copilot</span>
+            <span className="text-ink font-serif tracking-wide">TaxSaathi</span>
           </div>
           <p className="text-sm font-sans text-ink-muted max-w-[200px]">
             The intelligent workspace for modern tax professionals.

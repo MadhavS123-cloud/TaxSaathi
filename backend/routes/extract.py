@@ -1,12 +1,13 @@
 import os
 import shutil
 import tempfile
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from extract_invoice import extract_real_invoice
+from dependencies.auth import require_admin_token
 
 router = APIRouter(prefix="/api", tags=["Extract"])
 
-@router.post("/extract")
+@router.post("/extract", dependencies=[Depends(require_admin_token)])
 async def extract_document(file: UploadFile = File(...)):
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")

@@ -6,6 +6,7 @@ from typing import Optional, Dict
 
 from db.session import get_db
 from db.models import Case, Activity
+from dependencies.auth import require_admin_token
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
@@ -45,7 +46,7 @@ def get_cases(db: Session = Depends(get_db)):
         })
     return results
 
-@router.post("/", response_model=CaseResponse)
+@router.post("/", response_model=CaseResponse, dependencies=[Depends(require_admin_token)])
 def create_case(case_in: CaseCreate, db: Session = Depends(get_db)):
     db_case = Case(
         client=case_in.client,
@@ -77,7 +78,7 @@ def create_case(case_in: CaseCreate, db: Session = Depends(get_db)):
         "reconciliation": case_in.reconciliation or {"matched": 0, "exception": 0, "pending": 0}
     }
 
-@router.delete("/")
+@router.delete("/", dependencies=[Depends(require_admin_token)])
 def clear_all_cases(db: Session = Depends(get_db)):
     db.query(Activity).delete()
     db.query(Case).delete()
