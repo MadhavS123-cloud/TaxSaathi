@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from schemas.advisory import AdvisoryRequest, AdvisoryResponse, Citation
 from advisory import ask_tax_copilot
+from dependencies.auth import require_admin_token
 import logging
 
 router = APIRouter(prefix="/api", tags=["Advisory"])
@@ -9,7 +10,7 @@ router = APIRouter(prefix="/api", tags=["Advisory"])
 logger = logging.getLogger(__name__)
 
 
-@router.post("/advisory", response_model=AdvisoryResponse)
+@router.post("/advisory", response_model=AdvisoryResponse, dependencies=[Depends(require_admin_token)])
 async def get_tax_advisory(request: AdvisoryRequest):
     """
     Get grounded tax advisory based on Indian tax law (Income Tax Act, GST Act).

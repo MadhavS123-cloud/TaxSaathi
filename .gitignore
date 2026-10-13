@@ -1,8 +1,8 @@
 # Environments
 venv/
 env/
-.env
-.env.render
+.env*
+!.env.example
 __pycache__/
 *.pyc
 

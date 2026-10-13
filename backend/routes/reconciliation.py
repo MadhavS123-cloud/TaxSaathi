@@ -1,7 +1,7 @@
 import os
 import shutil
 import tempfile
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from decimal import Decimal
 
 from schemas.reconciliation import ReconciliationReport
@@ -11,10 +11,11 @@ from reconciliation.normalize import (
     load_bank_records
 )
 from reconciliation.reconcile import build_report
+from dependencies.auth import require_admin_token
 
 router = APIRouter(prefix="/reconciliation", tags=["Reconciliation"])
 
-@router.post("/run", response_model=ReconciliationReport)
+@router.post("/run", response_model=ReconciliationReport, dependencies=[Depends(require_admin_token)])
 async def run_reconciliation(
     invoice_file: UploadFile = File(...),
     payment_file: UploadFile = File(...),
