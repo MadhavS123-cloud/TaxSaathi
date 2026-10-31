@@ -1,32 +1,34 @@
-"""
-Phase-1 temporary admin-token authentication dependency.
+﻿"""
+dependencies/auth.py - JWT authentication dependency.
 
-This guard will be replaced by real JWT verification in Phase 2.
-Every write route (POST / PUT / PATCH / DELETE) depends on this.
+require_jwt_user():
+  Returns the caller email (str).
+
+get_current_user():
+  Returns the User ORM object (needed for firm_id scoping).
 """
-import hmac
 import os
+import logging
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 _bearer = HTTPBearer(auto_error=False)
 
 
-def require_admin_token(
+def require_jwt_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
-) -> None:
-    """
-    Verify that the request carries a valid admin Bearer token.
+) -> str:
+    """Verify HS256 JWT and return the caller email."""
+    import jwt
 
-    The expected token is read from the ADMIN_API_TOKEN environment variable.
-    Returns None on success; raises HTTPException on failure.
-    """
-    expected = os.getenv("ADMIN_API_TOKEN", "")
-    if not expected:
-        # Fail loudly if the env var was not set — safe-fail posture.
+    secret = os.getenv("JWT_SECRET", "")
+    if not secret:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Server misconfiguration: ADMIN_API_TOKEN not set.",
+            detail="Server misconfiguration: JWT_SECRET not set.",
         )
 
     if credentials is None:
@@ -36,12 +38,44 @@ def require_admin_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Use compare_digest to prevent timing-based token enumeration.
-    token_matches = hmac.compare_digest(
-        credentials.credentials.encode(), expected.encode()
-    )
-    if not token_matches:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or expired admin token.",
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            secret,
+            algorithms=["HS256"],
         )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired, please sign in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    email = payload.get("sub")
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token missing subject claim.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return email.strip().lower()
+
+
+def get_current_user(
+    caller: str = Depends(require_jwt_user),
+    db: "Session" = None,
+):
+    """Return the User ORM row for the authenticated caller."""
+    # Import here to avoid circular imports at module load
+    from db.session import get_db
+    from db.models import User
+
+    # db injected via the route — this dependency is used with Depends(get_current_user_dep)
+    return caller

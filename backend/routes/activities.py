@@ -5,8 +5,10 @@ from pydantic import BaseModel
 
 from db.session import get_db
 from db.models import Activity
+from dependencies.auth import require_jwt_user
 
 router = APIRouter(prefix="/activities", tags=["activities"])
+
 
 class ActivityResponse(BaseModel):
     id: int
@@ -14,13 +16,23 @@ class ActivityResponse(BaseModel):
     client: str | None
     description: str
     timestamp: str
-    
+
     class Config:
         from_attributes = True
 
+
 @router.get("/", response_model=List[ActivityResponse])
-def get_activities(db: Session = Depends(get_db)):
-    activities = db.query(Activity).order_by(Activity.timestamp.desc()).all()
+def get_activities(
+    db: Session = Depends(get_db),
+    caller: str = Depends(require_jwt_user),
+):
+    """Return only the activities belonging to the authenticated user."""
+    activities = (
+        db.query(Activity)
+        .filter(Activity.owner == caller)
+        .order_by(Activity.timestamp.desc())
+        .all()
+    )
     results = []
     for a in activities:
         results.append({
@@ -28,6 +40,6 @@ def get_activities(db: Session = Depends(get_db)):
             "type": a.type,
             "client": a.client,
             "description": a.description,
-            "timestamp": "Just now" # Should calculate difference from now, keep it simple for MVP
+            "timestamp": "Just now",
         })
     return results

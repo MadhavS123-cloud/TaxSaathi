@@ -11,11 +11,11 @@ from reconciliation.normalize import (
     load_bank_records
 )
 from reconciliation.reconcile import build_report
-from dependencies.auth import require_admin_token
+from dependencies.auth import require_jwt_user
 
 router = APIRouter(prefix="/reconciliation", tags=["Reconciliation"])
 
-@router.post("/run", response_model=ReconciliationReport, dependencies=[Depends(require_admin_token)])
+@router.post("/run", response_model=ReconciliationReport, dependencies=[Depends(require_jwt_user)])
 async def run_reconciliation(
     invoice_file: UploadFile = File(...),
     payment_file: UploadFile = File(...),

@@ -16,6 +16,7 @@ class AdvisoryRequest(BaseModel):
     """Request payload for tax advisory query."""
     query: str       # Tax question from the user
     top_k: int = 7  # Number of top results to retrieve (default: 7)
+    case_id: Optional[str] = None  # Optional case to associate the chat with
 
 
 class AdvisoryResponse(BaseModel):
