@@ -1,17 +1,47 @@
 from fastapi import APIRouter, HTTPException, Depends
 from schemas.advisory import AdvisoryRequest, AdvisoryResponse, Citation
 from advisory import ask_tax_copilot
-from dependencies.auth import require_admin_token
+from dependencies.auth import require_jwt_user
+from db.session import get_db
+from db.models import ChatMessage
+from sqlalchemy.orm import Session
+from typing import Optional
 import logging
 
 router = APIRouter(prefix="/api", tags=["Advisory"])
 
-# Configure logging
 logger = logging.getLogger(__name__)
 
 
-@router.post("/advisory", response_model=AdvisoryResponse, dependencies=[Depends(require_admin_token)])
-async def get_tax_advisory(request: AdvisoryRequest):
+@router.get("/advisory/history")
+async def get_chat_history(
+    case_id: Optional[str] = None,
+    db: Session = Depends(get_db),
+    caller: str = Depends(require_jwt_user),
+):
+    """Return saved chat messages for a case (or all messages for the user)."""
+    query = db.query(ChatMessage).filter(ChatMessage.owner == caller)
+    if case_id:
+        query = query.filter(ChatMessage.case_id == case_id)
+    messages = query.order_by(ChatMessage.created_at.asc()).all()
+    return [
+        {
+            "id": m.id,
+            "role": m.role,
+            "content": m.content,
+            "citations": m.citations_json or [],
+            "confidence": m.confidence,
+            "created_at": m.created_at.isoformat(),
+        }
+        for m in messages
+    ]
+
+@router.post("/advisory", response_model=AdvisoryResponse)
+async def get_tax_advisory(
+    request: AdvisoryRequest,
+    db: Session = Depends(get_db),
+    caller: str = Depends(require_jwt_user),
+):
     """
     Get grounded tax advisory based on Indian tax law (Income Tax Act, GST Act).
 
@@ -99,6 +129,36 @@ async def get_tax_advisory(request: AdvisoryRequest):
 
         answer_text = result.get("answer", "")
 
+        # Persist chat messages to DB
+        try:
+            user_msg = ChatMessage(
+                case_id=request.case_id,
+                owner=caller,
+                role="user",
+                content=request.query,
+            )
+            db.add(user_msg)
+            citations_data = [
+                {
+                    "act": c.act,
+                    "section_number": c.section_number,
+                    "section_title": c.section_title,
+                }
+                for c in citations
+            ]
+            asst_msg = ChatMessage(
+                case_id=request.case_id,
+                owner=caller,
+                role="assistant",
+                content=answer_text,
+                citations_json=citations_data,
+                confidence=confidence,
+            )
+            db.add(asst_msg)
+            db.commit()
+        except Exception as persist_err:
+            logger.warning("Failed to persist chat messages: %s", persist_err)
+
         return AdvisoryResponse(
             query=request.query,
             answer=answer_text,
@@ -116,7 +176,7 @@ async def get_tax_advisory(request: AdvisoryRequest):
         )
 
 
-@router.get("/advisory/health")
+@router.get("/advisory/health", dependencies=[Depends(require_jwt_user)])
 async def advisory_health():
     """
     Health check for advisory service.

@@ -13,11 +13,19 @@ logging.getLogger("google").setLevel(logging.ERROR)
 warnings.filterwarnings("ignore")
 
 load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
-    raise ValueError("GEMINI_API_KEY not found in .env file.")
 
-client = genai.Client(api_key=api_key)
+# Client is created lazily at call time so a missing key does not crash startup.
+_client = None
+
+
+def _get_client():
+    global _client
+    if _client is None:
+        api_key = os.getenv("GEMINI_API_KEY", "")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY is not set. Add it to your .env file.")
+        _client = genai.Client(api_key=api_key)
+    return _client
 
 REAL_INVOICE_PROMPT = """
 You are a senior Indian Chartered Accountant specializing in GST statutory audits and document forensics.
@@ -104,34 +112,35 @@ def extract_real_invoice(file_path: str):
 
     print(f"\n[Processing Real Document] {file_path}")
     mime_type, _ = mimetypes.guess_type(file_path)
+    c = _get_client()
 
     config = types.GenerateContentConfig(response_mime_type="application/json")
 
     if mime_type and mime_type.startswith("image/"):
         with Image.open(file_path) as image:
-            response = client.models.generate_content(
+            response = c.models.generate_content(
                 model="gemini-2.0-flash",
                 contents=[REAL_INVOICE_PROMPT, image],
                 config=config
             )
     elif file_path.lower().endswith(".pdf"):
-        uploaded_pdf = client.files.upload(file=file_path)
+        uploaded_pdf = c.files.upload(file=file_path)
         import time
         while uploaded_pdf.state.name == "PROCESSING":
             time.sleep(2)
-            uploaded_pdf = client.files.get(name=uploaded_pdf.name)
-        response = client.models.generate_content(
+            uploaded_pdf = c.files.get(name=uploaded_pdf.name)
+        response = c.models.generate_content(
             model="gemini-2.0-flash",
             contents=[REAL_INVOICE_PROMPT, uploaded_pdf],
             config=config
         )
     else:
-        uploaded_file = client.files.upload(file=file_path)
+        uploaded_file = c.files.upload(file=file_path)
         import time
         while uploaded_file.state.name == "PROCESSING":
             time.sleep(2)
-            uploaded_file = client.files.get(name=uploaded_file.name)
-        response = client.models.generate_content(
+            uploaded_file = c.files.get(name=uploaded_file.name)
+        response = c.models.generate_content(
             model="gemini-2.0-flash",
             contents=[REAL_INVOICE_PROMPT, uploaded_file],
             config=config

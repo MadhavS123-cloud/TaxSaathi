@@ -1,6 +1,7 @@
 import React from 'react';
 import { Search, LogOut } from 'lucide-react';
-import { useLocation, matchPath } from 'react-router-dom';
+import { useLocation, matchPath, useNavigate } from 'react-router-dom';
+import { clearToken, getEmail } from '../../hooks/useAuth';
 
 const PATH_MAP = {
   '/app/dashboard': 'Case Dashboard',
@@ -15,7 +16,22 @@ const PATH_MAP = {
 
 export default function Topbar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentModule = PATH_MAP[location.pathname] || 'Module';
+  const email = getEmail() ?? '';
+  // Build initials from email local-part, e.g. "alice.bob" → "AB".
+  const initials = email
+    .split('@')[0]
+    .split(/[._-]/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0].toUpperCase())
+    .join('') || '?';
+
+  function handleLogout() {
+    clearToken();
+    navigate('/login', { replace: true });
+  }
   
   const isCaseUploadRoute = matchPath('/cases/:caseId/upload', location.pathname);
 
@@ -65,14 +81,19 @@ export default function Topbar() {
         <div className="flex items-center gap-4 pl-4 border-l border-hairline">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-sm border border-hairline bg-paper flex items-center justify-center text-ink font-sans font-medium text-xs">
-              JD
+              {initials}
             </div>
             <div className="flex flex-col">
-              <span className="text-ink text-sm font-sans leading-tight">J. Doe</span>
+              <span className="text-ink text-sm font-sans leading-tight">{email || 'Signed in'}</span>
               <span className="text-ink-muted text-[10px] font-sans">Partner</span>
             </div>
           </div>
-          <button className="text-ink-muted hover:text-ink transition-colors ml-2">
+          <button
+            id="logout-btn"
+            onClick={handleLogout}
+            title="Sign out"
+            className="text-ink-muted hover:text-ink transition-colors ml-2"
+          >
             <LogOut size={18} strokeWidth={1.5} />
           </button>
         </div>
