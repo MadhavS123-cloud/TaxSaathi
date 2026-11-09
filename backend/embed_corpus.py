@@ -83,8 +83,10 @@ def run():
                 return candidate
         return subpath
 
+    from config import chroma_persist_dir
+
     api_key = os.getenv("GEMINI_API_KEY")
-    db_dir = os.path.join("data", "chroma_db")
+    db_dir = str(chroma_persist_dir())
     processed_dir = _resolve_dir(os.path.join("data", "processed_corpus"))
 
     logger.info("Starting embedding pipeline...")

@@ -45,6 +45,7 @@ class MatchType(str, Enum):
     EXACT_REFERENCE = "exact_reference"       # Tier 1
     EXACT_AMOUNT_DATE = "exact_amount_date"   # Tier 2
     FUZZY_AMOUNT_DATE = "fuzzy_amount_date"   # Tier 3 (two-pointer, within tolerance)
+    PARTIAL_PAYMENT = "partial_payment"       # One invoice, several payments
     UNMATCHED_INVOICE = "unmatched_invoice"   # Tier 4
     UNMATCHED_PAYMENT = "unmatched_payment"   # Tier 4
 
@@ -60,3 +61,7 @@ class MatchResult:
     amount_diff: Optional[Decimal] = None
     date_diff_days: Optional[int] = None
     notes: str = ""
+    payment_ids: list[str] = field(default_factory=list)
+    payments: list[Transaction] = field(default_factory=list)
+    total_paid: Optional[Decimal] = None
+    shortfall: Optional[Decimal] = None

@@ -1,9 +1,10 @@
-﻿"""
+"""
 routes/documents.py - Document upload, OCR extraction, and retrieval.
 
-POST /cases/{case_id}/documents  - Upload PDF/JPG/PNG, run Gemini OCR
-GET  /cases/{case_id}/documents  - List documents for a case
-PUT  /cases/{case_id}/documents/{doc_id} - Update extracted_json (review edits)
+Endpoints:
+  POST /cases/{case_id}/documents  - Upload PDF/JPG/PNG, run Gemini OCR
+  GET  /cases/{case_id}/documents  - List documents for a case
+  PUT  /cases/{case_id}/documents/{doc_id} - Update extracted_json (review edits)
 """
 import os
 import hashlib
@@ -16,19 +17,16 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from db.session import get_db
-from db.models import Case, Document, User
-from dependencies.auth import require_jwt_user
+from db.models import Case, Document, User, Activity, ReviewItem
+from dependencies.auth import get_current_user
 
 router = APIRouter(tags=["Documents"])
 
-UPLOAD_DIR = "data/uploads"
+_this_dir = os.path.dirname(os.path.abspath(__file__))
+_root_dir = os.path.dirname(os.path.dirname(_this_dir))
+UPLOAD_DIR = os.path.join(_root_dir, "data", "uploads")
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 ALLOWED_TYPES = {".pdf", ".jpg", ".jpeg", ".png"}
-
-
-def _get_user_firm_id(db: Session, caller: str) -> Optional[str]:
-    user = db.query(User).filter(User.email == caller).first()
-    return user.firm_id if user else None
 
 
 def _sha256(path: str) -> str:
@@ -42,8 +40,8 @@ def _sha256(path: str) -> str:
 class DocumentResponse(BaseModel):
     id: str
     filename: str
-    file_hash: Optional[str]
-    file_size: Optional[int]
+    file_hash: Optional[str] = None
+    file_size: Optional[int] = None
     status: str
     extracted_json: Optional[dict] = None
     error_detail: Optional[str] = None
@@ -56,18 +54,26 @@ class DocumentResponse(BaseModel):
 @router.get("/cases/{case_id}/documents", response_model=List[DocumentResponse])
 def list_documents(
     case_id: str,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    caller: str = Depends(require_jwt_user),
 ):
-    """List all documents for a case (firm-scoped)."""
-    firm_id = _get_user_firm_id(db, caller)
+    """List all documents for a case (strictly firm-scoped)."""
     case = db.query(Case).filter(Case.id == case_id).first()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found.")
+
+    firm_id = current_user.firm_id
     if firm_id and case.firm_id and case.firm_id != firm_id:
         raise HTTPException(status_code=403, detail="Access denied.")
+    if not firm_id and case.owner != current_user.email:
+        raise HTTPException(status_code=403, detail="Access denied.")
 
-    docs = db.query(Document).filter(Document.case_id == case_id).order_by(Document.created_at.desc()).all()
+    docs = (
+        db.query(Document)
+        .filter(Document.case_id == case_id)
+        .order_by(Document.created_at.desc())
+        .all()
+    )
     return [
         {
             "id": d.id,
@@ -77,7 +83,7 @@ def list_documents(
             "status": d.status,
             "extracted_json": d.extracted_json,
             "error_detail": d.error_detail,
-            "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S") if d.created_at else "",
         }
         for d in docs
     ]
@@ -87,16 +93,19 @@ def list_documents(
 async def upload_document(
     case_id: str,
     file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    caller: str = Depends(require_jwt_user),
 ):
     """Upload a document, detect duplicates, run Gemini OCR."""
     # 1. Validate case ownership
-    firm_id = _get_user_firm_id(db, caller)
     case = db.query(Case).filter(Case.id == case_id).first()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found.")
+
+    firm_id = current_user.firm_id
     if firm_id and case.firm_id and case.firm_id != firm_id:
+        raise HTTPException(status_code=403, detail="Access denied.")
+    if not firm_id and case.owner != current_user.email:
         raise HTTPException(status_code=403, detail="Access denied.")
 
     # 2. Validate file extension
@@ -111,13 +120,16 @@ async def upload_document(
 
     # 3. Save to temp location first, check size
     os.makedirs(UPLOAD_DIR, exist_ok=True)
-    tmp_path = os.path.join(UPLOAD_DIR, f"tmp_{file.filename}")
+    tmp_path = os.path.join(UPLOAD_DIR, f"tmp_{datetime.utcnow().timestamp()}_{file.filename}")
     total = 0
     with open(tmp_path, "wb") as out:
         while chunk := await file.read(65536):
             total += len(chunk)
             if total > MAX_FILE_SIZE:
-                os.remove(tmp_path)
+                try:
+                    os.remove(tmp_path)
+                except Exception:
+                    pass
                 raise HTTPException(status_code=413, detail="File exceeds 10 MB limit.")
             out.write(chunk)
 
@@ -129,10 +141,14 @@ async def upload_document(
         .first()
     )
     if existing:
-        os.remove(tmp_path)
+        try:
+            os.remove(tmp_path)
+        except Exception:
+            pass
+        date_str = existing.created_at.strftime("%Y-%m-%d") if existing.created_at else "earlier"
         raise HTTPException(
-            status_code=409,
-            detail=f"Duplicate file: this document was already uploaded as '{existing.filename}' on {existing.created_at.strftime('%Y-%m-%d')}.",
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Duplicate file: this document was already uploaded as '{existing.filename}' on {date_str}.",
         )
 
     # 5. Move to permanent location
@@ -152,36 +168,52 @@ async def upload_document(
     db.commit()
     db.refresh(doc)
 
-    # 7. Run Gemini OCR (synchronous — runs in same request)
-    try:
-        gemini_key = os.getenv("GEMINI_API_KEY", "")
-        if not gemini_key:
-            raise ValueError("Gemini API key missing — set GEMINI_API_KEY in .env")
+    # 7. Run Gemini OCR (synchronous — returns in same request)
+    gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not gemini_key:
+        doc.status = "failed"
+        doc.error_detail = "Gemini key missing — set GEMINI_API_KEY in .env"
+    else:
+        try:
+            from extract_invoice import extract_real_invoice
+            extracted = extract_real_invoice(final_path)
 
-        # Import lazily to avoid startup crash if key missing
-        from extract_invoice import extract_real_invoice
-        extracted = extract_real_invoice(final_path)
-
-        if not extracted or "error" in extracted and extracted.get("error") == "JSONDecodeError":
+            if not extracted:
+                doc.status = "failed"
+                doc.error_detail = "No text or invoice data found in document."
+            elif isinstance(extracted, dict) and extracted.get("error"):
+                doc.status = "failed"
+                doc.error_detail = f"Extraction error: {extracted.get('error')}"
+            else:
+                doc.extracted_json = extracted
+                doc.status = "extracted"
+        except FileNotFoundError as e:
             doc.status = "failed"
-            doc.error_detail = "Gemini returned non-JSON output. The document may be too blurry or unsupported."
-        else:
-            doc.extracted_json = extracted
-            doc.status = "extracted"
-
-    except ValueError as e:
-        doc.status = "failed"
-        doc.error_detail = str(e)
-    except FileNotFoundError as e:
-        doc.status = "failed"
-        doc.error_detail = f"File error: {e}"
-    except Exception as e:
-        doc.status = "failed"
-        doc.error_detail = str(e)[:500]
+            doc.error_detail = f"File not found: {e}"
+        except Exception as e:
+            err_str = str(e)
+            doc.status = "failed"
+            if "API_KEY" in err_str or "API key" in err_str:
+                doc.error_detail = "Invalid or expired Gemini API key."
+            else:
+                doc.error_detail = err_str[:300]
 
     doc.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(doc)
+
+    # If extraction failed, record a review item automatically
+    if doc.status == "failed" and firm_id:
+        review_item = ReviewItem(
+            firm_id=firm_id,
+            case_id=case_id,
+            item_type="failed_extraction",
+            title=f"Failed OCR: {doc.filename}",
+            detail=doc.error_detail or "Document extraction failed.",
+            status="pending",
+        )
+        db.add(review_item)
+        db.commit()
 
     return {
         "id": doc.id,
@@ -191,7 +223,7 @@ async def upload_document(
         "status": doc.status,
         "extracted_json": doc.extracted_json,
         "error_detail": doc.error_detail,
-        "created_at": doc.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "created_at": doc.created_at.strftime("%Y-%m-%d %H:%M:%S") if doc.created_at else "",
     }
 
 
@@ -200,15 +232,18 @@ def update_document(
     case_id: str,
     doc_id: str,
     body: dict,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    caller: str = Depends(require_jwt_user),
 ):
     """Save reviewed/corrected extracted_json."""
-    firm_id = _get_user_firm_id(db, caller)
     case = db.query(Case).filter(Case.id == case_id).first()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found.")
+
+    firm_id = current_user.firm_id
     if firm_id and case.firm_id and case.firm_id != firm_id:
+        raise HTTPException(status_code=403, detail="Access denied.")
+    if not firm_id and case.owner != current_user.email:
         raise HTTPException(status_code=403, detail="Access denied.")
 
     doc = db.query(Document).filter(Document.id == doc_id, Document.case_id == case_id).first()

@@ -125,14 +125,14 @@
 ## Command to Start
 
 ```bash
-cd TaxSaathi/backend
+cd backend
 python -m uvicorn main:app --reload --port 8000
 ```
 
 Then in another terminal:
 
 ```bash
-cd TaxSaathi/frontend
+cd frontend
 npm run dev
 ```
 

@@ -8,7 +8,7 @@ Architecture:
                       ↓
   LangChain ChatPromptTemplate  (CA-grade System + Human messages)
                       ↓
-  ChatGoogleGenerativeAI  (gemini-2.5-flash)
+  ChatGoogleGenerativeAI  (model id from GEMINI_MODEL_ADVISORY)
                       ↓
   LangChain StrOutputParser  +  custom AdvisoryOutputParser
                       ↓
@@ -24,11 +24,9 @@ Improvements over v1:
   - Prompt-injection protection: retrieved text treated as source only
 """
 
-import os
 import re
 import logging
-
-from dotenv import load_dotenv
+import time
 
 # LangChain core
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
@@ -42,32 +40,88 @@ from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmb
 # LangChain ChromaDB integration
 from langchain_chroma import Chroma
 
-load_dotenv()
+from config import CHROMA_PATH, GEMINI_MODEL_ADVISORY, gemini_api_key
 
 logger = logging.getLogger(__name__)
 
-api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
-    raise ValueError("GEMINI_API_KEY not found in .env file.")
+# Shown when retrieval returns nothing the model is allowed to cite.
+CORPUS_MISS = "The corpus does not contain the answer."
 
 # ---------------------------------------------------------------------------
-# 1.  LangChain LLM  (replaces genai.GenerativeModel)
+# 1.  LangChain LLM  — built on first use so import does not require a key
 # ---------------------------------------------------------------------------
-LLM_MODEL_NAME = "gemini-3.8-flash"
+_llm = None
 
-llm = ChatGoogleGenerativeAI(
-    model=LLM_MODEL_NAME,
-    google_api_key=api_key,
-    temperature=0.1,          # low temperature → deterministic, factual answers
-    max_output_tokens=2048,
-)
+
+def _retryable_gemini_error(exc):
+    """True for Gemini 429 and 503 responses, including wrapped causes."""
+    current = exc
+    seen = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if getattr(current, "code", None) in (429, 503):
+            return True
+        if getattr(current, "status_code", None) in (429, 503):
+            return True
+        current = current.__cause__
+    return False
+
+
+def _invoke_with_backoff(chain, payload):
+    """Invoke the advisory chain up to 3 times. On 429/503, wait 1s, then 2s, then 4s before giving up."""
+    waits = (1, 2, 4)
+    last_error = None
+    for wait in waits:
+        try:
+            return chain.invoke(payload)
+        except Exception as exc:
+            last_error = exc
+            if not _retryable_gemini_error(exc):
+                raise
+            time.sleep(wait)
+    raise last_error
+
+
+def get_llm():
+    """Return the advisory chat model. Raises RuntimeError if the key is missing."""
+    global _llm
+    if _llm is None:
+        _llm = ChatGoogleGenerativeAI(
+            model=GEMINI_MODEL_ADVISORY,
+            google_api_key=gemini_api_key(),
+            temperature=0.1,
+            max_output_tokens=2048,
+        )
+    return _llm
+
 
 # ---------------------------------------------------------------------------
 # 2.  LangChain ChromaDB Retriever
-#     (replaces raw chromadb.PersistentClient + collection.query)
 # ---------------------------------------------------------------------------
-_CHROMA_DIR = os.path.join("data", "chroma_db")
 _COLLECTION_NAME = "indian_tax_laws"
+_vectorstore = None
+_vectorstore_loaded = False
+
+
+def get_vectorstore():
+    """Open the corpus store once. A failure is logged and retrieval returns nothing."""
+    global _vectorstore, _vectorstore_loaded
+    if _vectorstore_loaded:
+        return _vectorstore
+    _vectorstore_loaded = True
+    path = str(CHROMA_PATH)
+    try:
+        _vectorstore = Chroma(
+            collection_name=_COLLECTION_NAME,
+            embedding_function=LocalChromaEmbedder(),
+            persist_directory=path,
+        )
+        logger.info("ChromaDB opened at %s collection '%s'", path, _COLLECTION_NAME)
+    except Exception as e:
+        logger.warning("ChromaDB could not be opened at %s: %s", path, e)
+        _vectorstore = None
+    return _vectorstore
+
 
 class LocalChromaEmbedder:
     def __init__(self):
@@ -77,18 +131,6 @@ class LocalChromaEmbedder:
         return self.ef(texts)
     def embed_query(self, text):
         return self.ef([text])[0]
-
-# Use the local Chroma default model to match the 384-dimension database
-try:
-    vectorstore = Chroma(
-        collection_name=_COLLECTION_NAME,
-        embedding_function=LocalChromaEmbedder(),
-        persist_directory=_CHROMA_DIR,
-    )
-    logger.info("[ChromaDB] Connected to collection '%s'", _COLLECTION_NAME)
-except Exception as e:
-    logger.warning("[ChromaDB] Could not connect: %s. Retrieval will return empty context.", e)
-    vectorstore = None
 
 
 # ---------------------------------------------------------------------------
@@ -107,6 +149,7 @@ def retrieve_relevant_documents(query: str, top_k: int = 7) -> list:
       3. Merge & Deduplicate: Ensure explicit section matches appear first,
          followed by semantic results up to top_k.
     """
+    vectorstore = get_vectorstore()
     if vectorstore is None:
         return []
 
@@ -152,14 +195,15 @@ def retrieve_relevant_documents(query: str, top_k: int = 7) -> list:
     except Exception as e:
         logger.warning("Semantic search error: %s", e)
 
-    return docs[:top_k]
+    kept = [doc for doc in docs if not _is_repealed_act(doc.metadata.get("act", ""))]
+    return kept[:top_k]
 
 
 # ---------------------------------------------------------------------------
 # 3.  CA-Grade System Prompt  +  ChatPromptTemplate
 # ---------------------------------------------------------------------------
 _SYSTEM_TEMPLATE = """\
-You are **CA Tax Copilot**, a professional AI assistant for Indian Chartered Accountants (CAs).
+You are **TaxSaathi**, a professional AI assistant for Indian Chartered Accountants (CAs).
 Your answers must be grounded in the statutory excerpts supplied below.
 You are serving qualified professionals — do NOT add generic disclaimers or suggest they "consult a CA".
 
@@ -174,10 +218,14 @@ You are serving qualified professionals — do NOT add generic disclaimers or su
    actual provision from the retrieved context. Use the exact citation format.
 4. SCOPE GUARD  — If the query is entirely unrelated to Indian tax, finance, or
    accounting, respond ONLY with:
-   INSUFFICIENT_CONTEXT: Query is not related to tax or accounting.
+   INSUFFICIENT_CONTEXT: The corpus does not contain the answer.
 5. INSUFFICIENCY RULE  — If the retrieved context does not contain enough
-   information to answer reliably, start with:
-   INSUFFICIENT_CONTEXT: [explain what is missing and what the CA should verify]
+   information to answer reliably, respond ONLY with:
+   INSUFFICIENT_CONTEXT: The corpus does not contain the answer.
+   Do not guess a section, rate, or date.
+6. REPEALED ACT  — The Income Tax Act, 1961 is repealed. Never cite a 1961
+   section number. Income-tax answers must come from the Income Tax Act, 2025
+   excerpts supplied below. If those excerpts are absent, use the insufficiency rule.
 ════════════════════════════════════════════════════════════════════════════
 
 ANSWER FORMAT RULES:
@@ -288,6 +336,93 @@ def _format_docs(docs) -> str:
     return "\n\n".join(blocks)
 
 
+def _is_repealed_act(act: str) -> bool:
+    """The Income-tax Act, 1961 is repealed and must not be cited."""
+    return "1961" in (act or "")
+
+
+def _section_key(section_number: str) -> str:
+    cleaned = re.sub(r"(?i)^section\s+", "", str(section_number or "")).strip().lower()
+    if cleaned in {"", "n/a", "none"}:
+        return ""
+    return cleaned
+
+
+def _acts_match(cited_act: str, retrieved_act: str) -> bool:
+    cited = (cited_act or "").lower()
+    retrieved = (retrieved_act or "").lower()
+    if not cited:
+        return True
+    if _is_repealed_act(cited) or _is_repealed_act(retrieved):
+        return False
+    for token in ("cgst", "igst", "income"):
+        if token in cited and token in retrieved:
+            return True
+    if not any(token in cited for token in ("cgst", "igst", "income", "gst")):
+        return True
+    return cited in retrieved or retrieved in cited
+
+
+def _docs_have_sections(docs) -> bool:
+    for doc in docs or []:
+        meta = getattr(doc, "metadata", None) or {}
+        if _is_repealed_act(meta.get("act", "")):
+            continue
+        if _section_key(meta.get("section_number", "")):
+            return True
+    return False
+
+
+def ground_citations(cited_sections: list, docs: list) -> list:
+    """Keep citations whose section was retrieved. Drop 1961 and invented numbers."""
+    retrieved = []
+    for doc in docs or []:
+        meta = getattr(doc, "metadata", None) or {}
+        act = str(meta.get("act", ""))
+        section = _section_key(meta.get("section_number", ""))
+        if not section or _is_repealed_act(act):
+            continue
+        retrieved.append((act, section, doc))
+
+    grounded = []
+    for item in cited_sections or []:
+        act = item.get("act", "")
+        section = _section_key(item.get("section_number", ""))
+        if not section or _is_repealed_act(act):
+            continue
+        matches = [row for row in retrieved if row[1] == section and _acts_match(act, row[0])]
+        if not matches:
+            continue
+        excerpt = (item.get("excerpt") or "").strip()
+        if not excerpt:
+            excerpt = (matches[0][2].page_content or "").strip()[:240]
+        grounded.append({
+            "act": matches[0][0],
+            "section_number": item.get("section_number", "").strip(),
+            "subsection": item.get("subsection", ""),
+            "section_title": item.get("section_title") or matches[0][2].metadata.get("section_title", ""),
+            "excerpt": excerpt,
+            "source_file": matches[0][2].metadata.get("source_file", ""),
+        })
+    return grounded
+
+
+def _corpus_miss_parsed() -> dict:
+    return {
+        "summary": CORPUS_MISS,
+        "detailed_answer": CORPUS_MISS,
+        "cited_sections": [],
+        "ca_action_note": (
+            "Verify with the official bare act. The Income Tax Act, 1961 is repealed; "
+            "use the Income Tax Act, 2025, the CGST Act, or the IGST Act."
+        ),
+        "confidence_level": "LOW",
+        "confidence_reason": "The corpus does not contain a citable provision for this query.",
+        "combined_answer": CORPUS_MISS,
+        "is_insufficient_context": True,
+    }
+
+
 def _context_is_empty(context_str: str) -> bool:
     """Return True if the context block carries no real statutory text."""
     if not context_str or context_str.strip() == "NO_CONTEXT_RETRIEVED":
@@ -327,20 +462,10 @@ def parse_advisory_output(raw_text: str, fallback_citations: list) -> dict:
         explanation = re.sub(
             r"(?i)^INSUFFICIENT_CONTEXT\s*[:：]?\s*", "", raw_text.strip()
         ).strip()
-        return {
-            "summary":               explanation or "The retrieved context did not contain sufficient information.",
-            "detailed_answer":       explanation or "The retrieved context did not contain sufficient information.",
-            "cited_sections":        [],
-            "ca_action_note": (
-                "Verify with the official bare act, latest CBDT/CBIC circular, "
-                "or GST Council notification. Check whether the required provision "
-                "is present in the knowledge base."
-            ),
-            "confidence_level":      "LOW",
-            "confidence_reason":     "Statutory context did not contain relevant information.",
-            "combined_answer":       explanation or raw_text.strip(),
-            "is_insufficient_context": True,
-        }
+        parsed = _corpus_miss_parsed()
+        if explanation and explanation != CORPUS_MISS:
+            parsed["confidence_reason"] = explanation
+        return parsed
 
     # ── Split readable body from machine markers ───────────────────────────
     answer_body = re.split(
@@ -473,7 +598,7 @@ def _build_rag_chain(top_k: int):
             )
         )
         | advisory_prompt
-        | llm
+        | get_llm()
         | _str_parser
     )
     return chain
@@ -505,7 +630,7 @@ def ask_tax_copilot(query: str, top_k: int = 7) -> dict:
         }
     """
     print(f"\n[Query] {query}")
-    print(f"[Engine] LangChain RAG chain | model={LLM_MODEL_NAME} | top_k={top_k}")
+    print(f"[Engine] LangChain RAG chain | model={GEMINI_MODEL_ADVISORY} | top_k={top_k}")
 
     # Build the chain
     chain = _build_rag_chain(top_k)
@@ -526,29 +651,33 @@ def ask_tax_copilot(query: str, top_k: int = 7) -> dict:
             cstr += f" ({title})"
         citations.append(cstr)
 
-    # Short-circuit if context is empty — don't waste LLM call
+    # Short-circuit when nothing citable was retrieved — do not call the model.
     context_str = _format_docs(retrieved_docs)
-    if _context_is_empty(context_str):
-        logger.warning("[Advisory] Empty context for query: %s", query)
-        insufficient = (
-            "INSUFFICIENT_CONTEXT: The knowledge base did not return relevant "
-            "statutory text for this query. The required provision may not be "
-            "indexed, or the query may need rephrasing. "
-            "Please verify directly with the official bare act or CBDT/CBIC notification."
-        )
-        parsed = parse_advisory_output(insufficient, [])
+    if _context_is_empty(context_str) or not _docs_have_sections(retrieved_docs):
+        logger.warning("[Advisory] No citable corpus context for query: %s", query)
+        parsed = _corpus_miss_parsed()
         return {
             "query":     query,
-            "answer":    parsed["combined_answer"] or insufficient,
+            "answer":    CORPUS_MISS,
             "citations": [],
             "parsed":    parsed,
         }
 
     # Run the LangChain chain — returns a plain string
-    raw_text: str = chain.invoke({"query": query})
+    raw_text: str = _invoke_with_backoff(chain, {"query": query})
 
-    # Parse structured output
+    # Parse structured output, then drop any citation that was not retrieved.
     parsed = parse_advisory_output(raw_text, citations)
+    parsed["cited_sections"] = ground_citations(parsed.get("cited_sections", []), retrieved_docs)
+    if parsed.get("is_insufficient_context") or not parsed["cited_sections"]:
+        parsed = _corpus_miss_parsed()
+        citations = []
+    else:
+        citations = [
+            f"{sec['act']}, Section {sec['section_number']}"
+            + (f" ({sec['section_title']})" if sec.get("section_title") else "")
+            for sec in parsed["cited_sections"]
+        ]
 
     print(
         f"[Engine] Confidence={parsed['confidence_level']} | "

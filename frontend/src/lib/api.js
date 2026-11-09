@@ -1,25 +1,28 @@
-﻿/**
+/**
  * src/lib/api.js - Centralized API client for TaxSaathi.
  *
  * - Reads token from localStorage ("taxsaathi_token")
- * - Sets "Authorization: Bearer <token>" on every request
- * - On 401: clears token and redirects to /login
- * - Does NOT set Content-Type for FormData (browser sets it with boundary)
+ * - Sets "Authorization: Bearer <token>" on EVERY request
+ * - Does NOT set Content-Type manually for FormData (browser sets boundary)
+ * - On 401: clears token and redirects to /login with session expired message
+ * - Reads VITE_API_URL, default http://localhost:8000
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const TOKEN_KEY = 'taxsaathi_token';
 const USER_KEY = 'taxsaathi_user';
 const FIRM_KEY = 'taxsaathi_firm';
 
-// ── Token helpers ─────────────────────────────────────────────────────────────
+// ── Token & session storage helpers ──────────────────────────────────────────
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
 
 export function setToken(token) {
-  localStorage.setItem(TOKEN_KEY, token);
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
+  }
 }
 
 export function clearToken() {
@@ -38,7 +41,9 @@ export function getUser() {
 }
 
 export function setUser(user) {
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  if (user) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
 }
 
 export function getFirm() {
@@ -51,7 +56,9 @@ export function getFirm() {
 }
 
 export function setFirm(firm) {
-  localStorage.setItem(FIRM_KEY, JSON.stringify(firm));
+  if (firm) {
+    localStorage.setItem(FIRM_KEY, JSON.stringify(firm));
+  }
 }
 
 export function isAuthenticated() {
@@ -66,20 +73,25 @@ export function isAuthenticated() {
   }
 }
 
-// ── Core fetch wrapper ────────────────────────────────────────────────────────
+// ── HTTP Core Wrapper ─────────────────────────────────────────────────────────
 
 function authHeaders(isFormData = false) {
   const token = getToken();
   const headers = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  if (!isFormData) headers['Content-Type'] = 'application/json';
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
   return headers;
 }
 
 function handleUnauthorized() {
   clearToken();
-  // Redirect with a query param so LoginPage can show a message
-  window.location.href = '/login?reason=session_expired';
+  if (window.location.pathname !== '/login') {
+    window.location.href = '/login?reason=session_expired';
+  }
 }
 
 async function request(method, path, body = null, isFormData = false) {
@@ -96,7 +108,7 @@ async function request(method, path, body = null, isFormData = false) {
   try {
     response = await fetch(url, options);
   } catch (networkErr) {
-    throw new Error(`Network error: cannot reach ${API_BASE}. Is the backend running?`);
+    throw new Error(`Cannot reach backend at ${API_BASE}. Is the backend running?`);
   }
 
   if (response.status === 401) {
@@ -109,19 +121,19 @@ async function request(method, path, body = null, isFormData = false) {
     try {
       const err = await response.json();
       detail = err.detail || err.message || detail;
-    } catch { /* ignore parse errors */ }
+    } catch {
+      // ignore JSON parse failure
+    }
     throw new Error(detail);
   }
 
-  // 204 No Content
   if (response.status === 204) return null;
   return response.json();
 }
 
-// ── API surface ───────────────────────────────────────────────────────────────
+// ── API Surface ───────────────────────────────────────────────────────────────
 
 export const api = {
-
   // Auth
   auth: {
     register: (name, email, password, firmName) =>
@@ -139,20 +151,26 @@ export const api = {
     summary: () => request('GET', '/dashboard/summary'),
   },
 
+  // Clients
+  clients: {
+    list: () => request('GET', '/clients'),
+    create: (data) => request('POST', '/clients', data),
+  },
+
   // Cases
   cases: {
-    list: () => request('GET', '/cases/'),
+    list: () => request('GET', '/cases'),
     get: (id) => request('GET', `/cases/${id}`),
-    create: (data) => request('POST', '/cases/', data),
-    deleteAll: () => request('DELETE', '/cases/'),
+    create: (data) => request('POST', '/cases', data),
+    deleteAll: () => request('DELETE', '/cases'),
   },
 
   // Activities
   activities: {
-    list: () => request('GET', '/activities/'),
+    list: () => request('GET', '/activities'),
   },
 
-  // Documents (OCR upload)
+  // Documents
   documents: {
     upload: (caseId, file) => {
       const fd = new FormData();
@@ -162,15 +180,6 @@ export const api = {
     list: (caseId) => request('GET', `/cases/${caseId}/documents`),
     update: (caseId, docId, extractedJson) =>
       request('PUT', `/cases/${caseId}/documents/${docId}`, { extracted_json: extractedJson }),
-  },
-
-  // Extract (legacy single-file endpoint)
-  extract: {
-    document: (file) => {
-      const fd = new FormData();
-      fd.append('file', file);
-      return request('POST', '/api/extract', fd, true);
-    },
   },
 
   // Reconciliation
@@ -183,14 +192,36 @@ export const api = {
       fd.append('amount_tolerance', String(amountTolerance));
       return request('POST', '/reconciliation/run', fd, true);
     },
+    reconcileCase: (caseId, paymentFile, invoiceFile = null, dateToleranceDays = 3, amountTolerance = 1.0) => {
+      const fd = new FormData();
+      fd.append('payment_file', paymentFile);
+      if (invoiceFile) {
+        fd.append('invoice_file', invoiceFile);
+      }
+      fd.append('date_tolerance_days', String(dateToleranceDays));
+      fd.append('amount_tolerance', String(amountTolerance));
+      return request('POST', `/cases/${caseId}/reconcile`, fd, true);
+    },
+    getCaseReconciliation: (caseId) => request('GET', `/cases/${caseId}/reconcile`),
   },
 
-  // Advisory
+  // Advisory RAG
   advisory: {
-    ask: (query, caseId = null, topK = 7) =>
-      request('POST', '/api/advisory', { query, case_id: caseId, top_k: topK }),
+    ask: (question, caseId = null, topK = 7) =>
+      request('POST', '/advisory/ask', { query: question, case_id: caseId, top_k: topK }),
     history: (caseId = null) =>
-      request('GET', caseId ? `/api/advisory/history?case_id=${caseId}` : '/api/advisory/history'),
+      request('GET', caseId ? `/advisory/history?case_id=${caseId}` : '/advisory/history'),
     health: () => request('GET', '/api/advisory/health'),
+  },
+
+  // Client communication drafts
+  drafts: {
+    create: (caseId) => request('POST', '/draft', { case_id: caseId }),
+  },
+
+  // Review & Approve
+  review: {
+    list: () => request('GET', '/review/items'),
+    takeAction: (itemId, action) => request('POST', `/review/items/${itemId}/action`, { action }),
   },
 };

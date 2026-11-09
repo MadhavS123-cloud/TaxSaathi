@@ -1,5 +1,5 @@
 """
-test_advisory_eval.py - Evaluation Suite for TaxSaathi CA Advisory Assistant
+test_advisory_eval.py - Evaluation Suite for the TaxSaathi advisory assistant
 =============================================================================
 Evaluates the RAG system across the 7 mandatory scenarios from the specification:
   A. Salary / CTC income tax calculation

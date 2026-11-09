@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { UploadCloud, FileText, Eye, FileImage } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { UploadCloud, FileText, Eye, FileImage, AlertCircle } from 'lucide-react';
 import UploadDropzone from '../components/upload/UploadDropzone';
 import DataTable from '../components/ui/DataTable';
 import StatusTag from '../components/ui/StatusTag';
-import { api } from '../services/api';
+import { api } from '../lib/api';
 
 const formatSize = (bytes) => {
   if (bytes < 1024) return bytes + ' B';
@@ -17,14 +17,55 @@ const getFileExtension = (filename) => {
 };
 
 export default function UploadPage() {
-  const [files, setFiles] = useState([]);
+  const { caseId } = useParams();
   const navigate = useNavigate();
+  const [files, setFiles] = useState([]);
+  const [loadError, setLoadError] = useState(null);
+
+  // Load existing documents for this case on mount
+  useEffect(() => {
+    if (!caseId) return;
+    api.documents.list(caseId)
+      .then((docs) => {
+        const mapped = (docs || []).map((d) => ({
+          id: d.id,
+          name: d.filename,
+          size: formatSize(d.file_size || 0),
+          status: d.status === 'extracted' ? 'matched' : d.status === 'failed' ? 'exception' : 'processing',
+          errorDetail: d.error_detail,
+          confidence: d.status === 'extracted' ? 95 : null,
+          uploadedAt: d.created_at,
+          extractedData: d.extracted_json,
+          dbId: d.id,
+        }));
+        setFiles(mapped);
+      })
+      .catch((e) => setLoadError(String(e)));
+  }, [caseId]);
+
+  if (!caseId) {
+    return (
+      <div className="max-w-[1000px] mx-auto flex flex-col gap-8 pb-12">
+        <div className="bg-amber-50 border border-amber-200 rounded-[2px] p-6 flex items-center gap-4">
+          <AlertCircle size={20} className="text-amber-600 shrink-0" />
+          <div>
+            <p className="font-sans font-medium text-amber-800">No case selected</p>
+            <p className="text-sm text-amber-700 mt-1">
+              Please open a case from the{' '}
+              <button onClick={() => navigate('/app/dashboard')} className="underline">dashboard</button>
+              {' '}before uploading documents.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleFilesSelected = (selectedFiles) => {
     selectedFiles.forEach(async (file) => {
-      const fileId = Math.random().toString(36).substr(2, 9);
+      const tempId = Math.random().toString(36).substr(2, 9);
       const newFileObj = {
-        id: fileId,
+        id: tempId,
         name: file.name,
         size: formatSize(file.size),
         status: 'processing',
@@ -36,47 +77,32 @@ export default function UploadPage() {
       setFiles((prev) => [newFileObj, ...prev]);
 
       try {
-        const res = await api.extractDocument(file);
-        if (res && res.success) {
-          setFiles((current) =>
-            current.map((f) =>
-              f.id === fileId
-                ? {
-                    ...f,
-                    status: 'matched',
-                    confidence: 98,
-                    extractedData: res.data,
-                  }
-                : f
-            )
-          );
-        } else {
-          setFiles((current) =>
-            current.map((f) =>
-              f.id === fileId ? { ...f, status: 'exception', error: res?.error } : f
-            )
-          );
-        }
+        const res = await api.documents.upload(caseId, file);
+        setFiles((current) =>
+          current.map((f) =>
+            f.id === tempId
+              ? {
+                  ...f,
+                  id: res.id,
+                  dbId: res.id,
+                  status: res.status === 'extracted' ? 'matched' : res.status === 'failed' ? 'exception' : 'processing',
+                  confidence: res.status === 'extracted' ? 95 : null,
+                  extractedData: res.extracted_json,
+                  errorDetail: res.error_detail,
+                }
+              : f
+          )
+        );
       } catch (err) {
         setFiles((current) =>
-          current.map((f) => (f.id === fileId ? { ...f, status: 'exception' } : f))
+          current.map((f) =>
+            f.id === tempId
+              ? { ...f, status: 'exception', errorDetail: String(err.message || err) }
+              : f
+          )
         );
       }
     });
-  };
-
-  const testEmptyState = () => setFiles([]);
-  
-  const simulateFailedUpload = () => {
-    const failedFile = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: 'Corrupted_Invoice_Scan.pdf',
-      size: '2.4 MB',
-      status: 'exception',
-      confidence: 0,
-      uploadedAt: new Date().toLocaleTimeString(),
-    };
-    setFiles((prev) => [failedFile, ...prev]);
   };
 
   const COLUMNS = [
@@ -114,20 +140,27 @@ export default function UploadPage() {
     {
       header: 'Status',
       cell: (row) => {
-        // Map internal status to display labels
         let label = 'Processing';
         if (row.status === 'matched') label = 'Extracted';
         if (row.status === 'exception') label = 'Failed';
         if (row.status === 'pending') label = 'Pending';
-        
         return <StatusTag status={row.status} label={label} />;
       }
     },
     {
       header: 'Processing State',
       cell: (row) => (
-        <span className="text-xs font-mono text-ink-muted">
-          {row.status === 'matched' ? `${row.confidence}% Avg Confidence` : row.status === 'exception' ? 'Extraction Failed' : 'Scanning...'}
+        <span
+          className="text-xs font-mono text-ink-muted cursor-default"
+          title={row.errorDetail || ''}
+        >
+          {row.status === 'matched'
+            ? `${row.confidence || 95}% Avg Confidence`
+            : row.status === 'exception'
+            ? row.errorDetail
+              ? `Error: ${row.errorDetail.slice(0, 60)}${row.errorDetail.length > 60 ? '…' : ''}`
+              : 'Extraction Failed'
+            : 'Scanning...'}
         </span>
       )
     },
@@ -139,10 +172,14 @@ export default function UploadPage() {
           <button className="text-ink-muted hover:text-ink transition-colors p-1" title="Inspect Source">
             <Eye size={16} strokeWidth={1.5} />
           </button>
-          <button 
+          <button
             className="text-xs font-sans font-medium text-paper bg-ink hover:text-brass px-3 py-1.5 rounded-[2px] transition-colors disabled:opacity-50"
             disabled={row.status !== 'matched'}
-            onClick={() => navigate(`/app/cases/CAS-2024-001/invoices/${row.id}/review`, { state: { extractedData: row.extractedData, filename: row.name, fileUrl: row.fileUrl } })}
+            onClick={() =>
+              navigate(`/app/cases/${caseId}/invoices/${row.dbId || row.id}/review`, {
+                state: { extractedData: row.extractedData, filename: row.name, fileUrl: row.fileUrl, caseId }
+              })
+            }
           >
             Review
           </button>
@@ -153,7 +190,7 @@ export default function UploadPage() {
 
   return (
     <div className="max-w-[1000px] mx-auto flex flex-col gap-8 pb-12">
-      
+
       {/* 1. Header Card */}
       <div className="bg-paper-raised border border-hairline p-6 flex items-start justify-between">
         <div className="flex gap-4">
@@ -162,28 +199,21 @@ export default function UploadPage() {
           </div>
           <div>
             <div className="text-[10px] font-mono tracking-[0.15em] uppercase text-ink-muted mb-1">
-              Document Upload & Optical Character Recognition
+              Document Upload &amp; Optical Character Recognition
             </div>
             <p className="text-sm font-sans text-ink leading-relaxed max-w-xl">
               Ingest bulk invoices, receipts, and bank statements for this case. The OCR engine will automatically classify documents and extract structured line items.
             </p>
+            <p className="text-xs font-mono text-brass mt-1">Case: {caseId}</p>
           </div>
         </div>
-        <div className="flex gap-2 shrink-0 ml-4">
-          <button 
-            onClick={testEmptyState}
-            className="text-[11px] font-sans text-ink-muted border border-hairline px-3 py-1.5 rounded-[2px] hover:bg-paper transition-colors"
-          >
-            Test Empty State
-          </button>
-          <button 
-            onClick={simulateFailedUpload}
-            className="text-[11px] font-sans text-ink-muted border border-hairline px-3 py-1.5 rounded-[2px] hover:bg-paper transition-colors"
-          >
-            Simulate Failed Upload
-          </button>
-        </div>
       </div>
+
+      {loadError && (
+        <div className="p-4 bg-rust/10 border border-rust/30 text-rust rounded-[2px] text-sm font-sans">
+          Failed to load existing documents: {loadError}
+        </div>
+      )}
 
       {/* 2. Dropzone */}
       <UploadDropzone onFilesSelected={handleFilesSelected} />
@@ -193,7 +223,7 @@ export default function UploadPage() {
         <div className="flex items-center justify-between mb-4 border-b border-hairline pb-2">
           <h3 className="font-serif text-lg text-ink">Uploaded File Queue ({files.length})</h3>
         </div>
-        
+
         <div className="bg-paper-raised border border-hairline">
           <DataTable columns={COLUMNS} data={files} />
         </div>

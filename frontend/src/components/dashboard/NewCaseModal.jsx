@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Building2, FileSpreadsheet, Hash } from 'lucide-react';
+import { X, Building2, FileSpreadsheet, Hash, Calendar } from 'lucide-react';
 import PrimaryButton from '../ui/PrimaryButton';
 import SecondaryButton from '../ui/SecondaryButton';
 
@@ -7,26 +7,29 @@ export default function NewCaseModal({ isOpen, onClose, onCreateCase }) {
   const [client, setClient] = useState('');
   const [scope, setScope] = useState('');
   const [gstin, setGstin] = useState('');
+  const [pan, setPan] = useState('');
+  const [assessmentYear, setAssessmentYear] = useState('2024-25');
   const [status, setStatus] = useState('pending');
-  const [matched, setMatched] = useState(0);
-  const [exception, setException] = useState(0);
-  const [pending, setPending] = useState(0);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!client.trim() || !scope.trim()) return;
+    if (!client.trim()) return;
 
     onCreateCase({
       client: client.trim(),
-      scope: scope.trim(),
-      gstin: gstin.trim() || null,
-      status,
+      legal_name: client.trim(),
+      scope: scope.trim() || 'Statutory Tax Audit',
+      title: scope.trim() || 'Statutory Tax Audit',
+      gstin: gstin.trim() ? gstin.trim().toUpperCase() : null,
+      pan: pan.trim() ? pan.trim().toUpperCase() : null,
+      assessment_year: assessmentYear.trim() || '2024-25',
+      status: status.toUpperCase(),
       reconciliation: {
-        matched: Number(matched) || 0,
-        exception: Number(exception) || 0,
-        pending: Number(pending) || 0,
+        matched: 0,
+        exception: 0,
+        pending: 0,
       }
     });
 
@@ -34,17 +37,16 @@ export default function NewCaseModal({ isOpen, onClose, onCreateCase }) {
     setClient('');
     setScope('');
     setGstin('');
+    setPan('');
+    setAssessmentYear('2024-25');
     setStatus('pending');
-    setMatched(0);
-    setException(0);
-    setPending(0);
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-xs p-4">
       <div className="bg-paper-raised border border-hairline w-full max-w-lg shadow-2xl rounded-[4px] overflow-hidden">
-        
+
         {/* Modal Header */}
         <div className="flex items-center justify-between p-6 border-b border-hairline bg-paper">
           <div className="flex items-center gap-3">
@@ -56,7 +58,7 @@ export default function NewCaseModal({ isOpen, onClose, onCreateCase }) {
               <p className="text-xs font-sans text-ink-muted">Create a new statutory audit or tax reconciliation dossier.</p>
             </div>
           </div>
-          <button 
+          <button
             type="button"
             onClick={onClose}
             className="p-1.5 text-ink-muted hover:text-ink hover:bg-paper transition-colors rounded-[2px]"
@@ -67,11 +69,11 @@ export default function NewCaseModal({ isOpen, onClose, onCreateCase }) {
 
         {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          
-          {/* Client Name */}
+
+          {/* Legal / Client Name */}
           <div>
             <label className="block text-xs font-mono uppercase tracking-wider text-ink mb-1.5">
-              Client / Entity Name <span className="text-rust">*</span>
+              Legal Entity Name <span className="text-rust">*</span>
             </label>
             <div className="relative">
               <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" strokeWidth={1.5} />
@@ -86,10 +88,10 @@ export default function NewCaseModal({ isOpen, onClose, onCreateCase }) {
             </div>
           </div>
 
-          {/* Audit Scope */}
+          {/* Scope / Title */}
           <div>
             <label className="block text-xs font-mono uppercase tracking-wider text-ink mb-1.5">
-              Audit Scope / Assignment <span className="text-rust">*</span>
+              Engagement Scope / Title <span className="text-rust">*</span>
             </label>
             <div className="relative">
               <FileSpreadsheet size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" strokeWidth={1.5} />
@@ -104,11 +106,11 @@ export default function NewCaseModal({ isOpen, onClose, onCreateCase }) {
             </div>
           </div>
 
-          {/* GSTIN / PAN & Status Row */}
+          {/* GSTIN and PAN */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-mono uppercase tracking-wider text-ink mb-1.5">
-                GSTIN / PAN (Optional)
+                GSTIN (Optional)
               </label>
               <div className="relative">
                 <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" strokeWidth={1.5} />
@@ -124,7 +126,42 @@ export default function NewCaseModal({ isOpen, onClose, onCreateCase }) {
 
             <div>
               <label className="block text-xs font-mono uppercase tracking-wider text-ink mb-1.5">
-                Initial Status
+                PAN (Optional)
+              </label>
+              <div className="relative">
+                <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" strokeWidth={1.5} />
+                <input
+                  type="text"
+                  placeholder="e.g. AAACT1234F"
+                  value={pan}
+                  onChange={(e) => setPan(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-paper border border-hairline rounded-[2px] text-xs font-mono text-ink placeholder:text-ink-muted/60 focus:outline-none focus:border-brass uppercase"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Assessment Year and Status */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-mono uppercase tracking-wider text-ink mb-1.5">
+                Assessment Year
+              </label>
+              <div className="relative">
+                <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" strokeWidth={1.5} />
+                <input
+                  type="text"
+                  placeholder="e.g. 2024-25"
+                  value={assessmentYear}
+                  onChange={(e) => setAssessmentYear(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-paper border border-hairline rounded-[2px] text-xs font-mono text-ink focus:outline-none focus:border-brass"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono uppercase tracking-wider text-ink mb-1.5">
+                Status
               </label>
               <select
                 value={status}
@@ -135,45 +172,6 @@ export default function NewCaseModal({ isOpen, onClose, onCreateCase }) {
                 <option value="matched">Matched</option>
                 <option value="exception">Exception</option>
               </select>
-            </div>
-          </div>
-
-          {/* Initial Reconciliation Metrics */}
-          <div className="pt-2 border-t border-hairline">
-            <label className="block text-xs font-mono uppercase tracking-wider text-ink-muted mb-2">
-              Initial Reconciliation Ledger Counts
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <span className="text-[10px] font-mono text-forest block mb-1">Matched Entries</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={matched}
-                  onChange={(e) => setMatched(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-paper border border-hairline rounded-[2px] text-xs font-mono text-ink focus:outline-none focus:border-brass"
-                />
-              </div>
-              <div>
-                <span className="text-[10px] font-mono text-rust block mb-1">Exceptions</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={exception}
-                  onChange={(e) => setException(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-paper border border-hairline rounded-[2px] text-xs font-mono text-ink focus:outline-none focus:border-brass"
-                />
-              </div>
-              <div>
-                <span className="text-[10px] font-mono text-amber-flag block mb-1">Pending</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={pending}
-                  onChange={(e) => setPending(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-paper border border-hairline rounded-[2px] text-xs font-mono text-ink focus:outline-none focus:border-brass"
-                />
-              </div>
             </div>
           </div>
 
