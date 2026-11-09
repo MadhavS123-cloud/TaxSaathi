@@ -18,6 +18,7 @@ from routes.activities import router as activities_router
 from routes.review import router as review_router
 from routes.extract import router as extract_router
 from routes.draft import router as draft_router
+from routes.voice import router as voice_router
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,7 @@ app.include_router(activities_router)
 app.include_router(review_router)
 app.include_router(extract_router)
 app.include_router(draft_router)
+app.include_router(voice_router)
 
 # Auto-create tables on startup
 Base.metadata.create_all(bind=engine)

@@ -46,6 +46,7 @@ class ReconciliationRow(BaseModel):
     payments: List[PaymentModel] = Field(default_factory=list)
     total_paid: Optional[str] = None
     shortfall: Optional[str] = None
+    review_status: Optional[Literal["approved", "rejected"]] = None
 
 class ReconciliationReport(BaseModel):
     # GET /cases/{id}/reconcile returns summary=null when the case has no saved run.

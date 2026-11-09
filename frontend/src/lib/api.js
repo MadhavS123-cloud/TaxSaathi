@@ -224,4 +224,16 @@ export const api = {
     list: () => request('GET', '/review/items'),
     takeAction: (itemId, action) => request('POST', `/review/items/${itemId}/action`, { action }),
   },
+
+  voice: {
+    turn: (caseId, wavBlob, rowKey = '') => {
+      const fd = new FormData();
+      fd.append('case_id', caseId);
+      fd.append('row_key_value', rowKey);
+      fd.append('audio', wavBlob, 'speech.wav');
+      return request('POST', '/voice/turn', fd, true);
+    },
+    remind: (caseId, language = 'hi-IN') =>
+      request('POST', '/voice/remind', { case_id: caseId, language }),
+  },
 };

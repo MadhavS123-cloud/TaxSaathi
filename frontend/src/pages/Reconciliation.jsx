@@ -128,6 +128,14 @@ export default function Reconciliation() {
         rows={rows}
         isRunning={isRunning}
         onRunReconciliation={handleRunReconciliation}
+        caseId={selectedCaseId}
+        onReviewed={(rowKey, status) => {
+          setRows((current) => current.map((row) => (
+            (row.invoice?.id || row.payment?.id) === rowKey
+              ? { ...row, review_status: status }
+              : row
+          )));
+        }}
       />
     </div>
   );

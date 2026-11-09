@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import VoiceDesk from "./VoiceDesk";
 
 const MATCH_TYPES = {
   exact_reference: { label: "Exact Reference", colorClass: "text-forest bg-forest/10 border-forest/20" },
@@ -47,16 +48,24 @@ const FileUploader = ({ label, accept, file, setFile }) => {
   );
 };
 
+function isException(row) {
+  if (row.review_status === "approved") return false;
+  return row.needs_review || ["partial_payment", "unmatched_invoice", "unmatched_payment"].includes(row.match_type);
+}
+
 export default function ReconciliationPanel({
   summary = null,
   rows = [],
   isRunning = false,
   onRunReconciliation = () => {},
+  caseId = "",
+  onReviewed = () => {},
 }) {
   const [invoiceFile, setInvoiceFile] = useState(null);
   const [paymentFile, setPaymentFile] = useState(null);
-  const [filter, setFilter] = useState("All");
+  const [filter, setFilter] = useState("exceptions");
   const [expandedRows, setExpandedRows] = useState(new Set());
+  const [selectedKey, setSelectedKey] = useState("");
 
   const handleRun = () => {
     onRunReconciliation(invoiceFile, paymentFile);
@@ -69,7 +78,12 @@ export default function ReconciliationPanel({
     setExpandedRows(next);
   };
 
-  const filteredRows = rows.filter((r) => filter === "All" || r.match_type === filter);
+  const filteredRows = rows.filter((row) => {
+    if (filter === "exceptions") return isException(row);
+    if (filter === "All") return true;
+    return row.match_type === filter;
+  });
+  const selectedRow = rows.find((row) => (row.invoice?.id || row.payment?.id) === selectedKey) || null;
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8 font-sans text-ink">
@@ -100,6 +114,8 @@ export default function ReconciliationPanel({
           </button>
         </div>
       </section>
+
+      <VoiceDesk caseId={caseId} selectedRow={selectedRow} onReviewed={onReviewed} />
 
       {/* Summary Strip */}
       <section className="bg-paper border border-hairline p-6">
@@ -151,6 +167,7 @@ export default function ReconciliationPanel({
               onChange={(e) => setFilter(e.target.value)}
               className="bg-paper border border-hairline font-mono text-xs py-1 px-2 text-ink outline-none focus:border-brass"
             >
+              <option value="exceptions">Exceptions</option>
               <option value="All">All Categories</option>
               {Object.entries(MATCH_TYPES).map(([key, config]) => (
                 <option key={key} value={key}>{config.label}</option>
@@ -181,6 +198,7 @@ export default function ReconciliationPanel({
               <tbody className="divide-y divide-hairline">
                 {filteredRows.map((row, idx) => {
                   const isExpanded = expandedRows.has(idx);
+                  const rowKey = row.invoice?.id || row.payment?.id || "";
                   const typeConfig = MATCH_TYPES[row.match_type] || {
                     label: row.match_type,
                     colorClass: "text-ink bg-paper border-hairline",
@@ -189,15 +207,27 @@ export default function ReconciliationPanel({
                   return (
                     <React.Fragment key={idx}>
                       <tr
-                        onClick={() => toggleRow(idx)}
+                        onClick={() => {
+                          toggleRow(idx);
+                          if (rowKey) setSelectedKey(rowKey);
+                        }}
                         className={`cursor-pointer hover:bg-paper-raised transition-colors ${
-                          row.needs_review ? "border-l-[3px] border-l-amber-flag" : "border-l-[3px] border-l-transparent"
+                          rowKey && rowKey === selectedKey
+                            ? "border-l-[3px] border-l-brass bg-brass/5"
+                            : row.needs_review
+                              ? "border-l-[3px] border-l-amber-flag"
+                              : "border-l-[3px] border-l-transparent"
                         }`}
                       >
                         <td className="py-3 px-4">
                           <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider border ${typeConfig.colorClass}`}>
                             {typeConfig.label}
                           </span>
+                          {row.review_status && (
+                            <span className="ml-2 px-2 py-0.5 text-[10px] uppercase tracking-wider border border-hairline text-ink-muted">
+                              {row.review_status}
+                            </span>
+                          )}
                         </td>
                         <td className="py-3 px-4 font-mono text-xs">
                           {(row.confidence * 100).toFixed(0)}%

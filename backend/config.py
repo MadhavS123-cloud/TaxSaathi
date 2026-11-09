@@ -69,3 +69,13 @@ def gemini_extract_model() -> str:
 
 def gemini_advisory_model() -> str:
     return GEMINI_MODEL_ADVISORY
+
+
+def gnani_api_key() -> str:
+    """Return the Gnani speech key, or raise a clear error if it is missing."""
+    key = os.getenv("GNANI_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError(
+            "GNANI_API_KEY is not set. Add it to backend/.env or the repo-root .env."
+        )
+    return key
