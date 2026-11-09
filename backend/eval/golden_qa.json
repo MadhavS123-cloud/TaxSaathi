@@ -1,0 +1,58 @@
+[
+  {
+    "id": "A",
+    "title": "CTC is not taxable salary",
+    "question": "What is the income-tax liability for an employee with a CTC of Rs. 20 lakh?",
+    "reference": "The Income-tax Act, 2025 does not define CTC. Tax is computed on salary after the deductions in Section 19, including the standard deduction, and under the computation in Section 202. A CTC figure alone does not determine the tax. The answer must state the missing facts instead of inventing a liability.",
+    "in_corpus": true,
+    "expected_sections": [{"act_contains": "Income", "section": "19"}]
+  },
+  {
+    "id": "B",
+    "title": "Input tax credit eligibility",
+    "question": "When can a registered person claim input tax credit under the CGST Act?",
+    "reference": "Section 16 of the CGST Act, 2017 lets a registered person take credit of input tax on goods or services used in the course or furtherance of business. Credit depends on the conditions in that section, including a tax invoice or debit note, receipt of the goods or services, payment of the tax to the Government, and furnishing of the return. Section 17 restricts and blocks some of that credit.",
+    "in_corpus": true,
+    "expected_sections": [{"act_contains": "CGST", "section": "16"}]
+  },
+  {
+    "id": "C",
+    "title": "Inter-state supply",
+    "question": "How is an inter-state supply identified under the IGST Act?",
+    "reference": "Section 7 of the IGST Act, 2017 treats a supply as inter-state when the location of the supplier and the place of supply are in different States or Union territories, and it also covers the import cases stated in that section. Section 8 treats a supply as intra-state when the location of the supplier and the place of supply are in the same State or Union territory.",
+    "in_corpus": true,
+    "expected_sections": [{"act_contains": "IGST", "section": "7"}]
+  },
+  {
+    "id": "D",
+    "title": "Section 16 conditions",
+    "question": "What conditions does Section 16 of the CGST Act impose before input tax credit is taken?",
+    "reference": "Section 16 of the CGST Act, 2017 requires, before input tax credit is taken, possession of a tax invoice or debit note, receipt of the goods or services, payment of the tax charged to the Government, and furnishing of the return. The credit is for input tax used in the course or furtherance of business.",
+    "in_corpus": true,
+    "expected_sections": [{"act_contains": "CGST", "section": "16"}]
+  },
+  {
+    "id": "E",
+    "title": "Unspecified penalty",
+    "question": "What is the penalty for this violation?",
+    "reference": "The corpus does not contain the answer.",
+    "in_corpus": false,
+    "expected_sections": []
+  },
+  {
+    "id": "F",
+    "title": "Act outside the corpus",
+    "question": "What are the foreign contribution caps under the Foreign Contribution Regulation Act?",
+    "reference": "The corpus does not contain the answer.",
+    "in_corpus": false,
+    "expected_sections": []
+  },
+  {
+    "id": "G",
+    "title": "Standard deduction under the 2025 Act",
+    "question": "What standard deduction is allowed from salary under the Income-tax Act, 2025?",
+    "reference": "Section 19 of the Income-tax Act, 2025 allows a standard deduction of Rs. 75,000 or the salary, whichever is less, where tax is computed under section 202(1), and Rs. 50,000 or the salary, whichever is less, in any other case. The answer must cite that 2025 Act provision and must not cite the repealed 1961 Act.",
+    "in_corpus": true,
+    "expected_sections": [{"act_contains": "Income", "section": "19"}]
+  }
+]

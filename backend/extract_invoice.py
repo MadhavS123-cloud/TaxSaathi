@@ -2,6 +2,7 @@ import os
 import json
 import mimetypes
 import logging
+import time
 import warnings
 from dotenv import load_dotenv
 from google import genai
@@ -12,6 +13,8 @@ from PIL import Image
 logging.getLogger("google").setLevel(logging.ERROR)
 warnings.filterwarnings("ignore")
 
+from config import GEMINI_MODEL_EXTRACT, gemini_api_key
+
 load_dotenv()
 
 # Client is created lazily at call time so a missing key does not crash startup.
@@ -21,11 +24,37 @@ _client = None
 def _get_client():
     global _client
     if _client is None:
-        api_key = os.getenv("GEMINI_API_KEY", "")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY is not set. Add it to your .env file.")
-        _client = genai.Client(api_key=api_key)
+        _client = genai.Client(api_key=gemini_api_key())
     return _client
+
+
+def _retryable_gemini_error(exc):
+    """True for Gemini 429 and 503 responses, including wrapped causes."""
+    current = exc
+    seen = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if getattr(current, "code", None) in (429, 503):
+            return True
+        if getattr(current, "status_code", None) in (429, 503):
+            return True
+        current = current.__cause__
+    return False
+
+
+def _generate_content(client, **kwargs):
+    """Call generate_content up to 3 times. On 429/503, wait 1s, then 2s, then 4s before giving up."""
+    waits = (1, 2, 4)
+    last_error = None
+    for wait in waits:
+        try:
+            return client.models.generate_content(**kwargs)
+        except Exception as exc:
+            last_error = exc
+            if not _retryable_gemini_error(exc):
+                raise
+            time.sleep(wait)
+    raise last_error
 
 REAL_INVOICE_PROMPT = """
 You are a senior Indian Chartered Accountant specializing in GST statutory audits and document forensics.
@@ -118,8 +147,9 @@ def extract_real_invoice(file_path: str):
 
     if mime_type and mime_type.startswith("image/"):
         with Image.open(file_path) as image:
-            response = c.models.generate_content(
-                model="gemini-2.0-flash",
+            response = _generate_content(
+                c,
+                model=GEMINI_MODEL_EXTRACT,
                 contents=[REAL_INVOICE_PROMPT, image],
                 config=config
             )
@@ -129,8 +159,9 @@ def extract_real_invoice(file_path: str):
         while uploaded_pdf.state.name == "PROCESSING":
             time.sleep(2)
             uploaded_pdf = c.files.get(name=uploaded_pdf.name)
-        response = c.models.generate_content(
-            model="gemini-2.0-flash",
+        response = _generate_content(
+            c,
+            model=GEMINI_MODEL_EXTRACT,
             contents=[REAL_INVOICE_PROMPT, uploaded_pdf],
             config=config
         )
@@ -140,8 +171,9 @@ def extract_real_invoice(file_path: str):
         while uploaded_file.state.name == "PROCESSING":
             time.sleep(2)
             uploaded_file = c.files.get(name=uploaded_file.name)
-        response = c.models.generate_content(
-            model="gemini-2.0-flash",
+        response = _generate_content(
+            c,
+            model=GEMINI_MODEL_EXTRACT,
             contents=[REAL_INVOICE_PROMPT, uploaded_file],
             config=config
         )

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Literal
 
 class ReconciliationSummary(BaseModel):
@@ -10,6 +10,7 @@ class ReconciliationSummary(BaseModel):
     unmatched_invoices: int
     unmatched_payments: int
     match_rate_pct: float
+    partial_payment_matches: int = 0
 
 class InvoiceModel(BaseModel):
     id: str
@@ -30,6 +31,7 @@ class ReconciliationRow(BaseModel):
         "exact_reference",
         "exact_amount_date",
         "fuzzy_amount_date",
+        "partial_payment",
         "unmatched_invoice",
         "unmatched_payment"
     ]
@@ -40,7 +42,13 @@ class ReconciliationRow(BaseModel):
     date_diff_days: Optional[int] = None
     notes: str
     needs_review: bool
+    payment_ids: List[str] = Field(default_factory=list)
+    payments: List[PaymentModel] = Field(default_factory=list)
+    total_paid: Optional[str] = None
+    shortfall: Optional[str] = None
 
 class ReconciliationReport(BaseModel):
-    summary: ReconciliationSummary
-    rows: List[ReconciliationRow]
+    # GET /cases/{id}/reconcile returns summary=null when the case has no saved run.
+    summary: Optional[ReconciliationSummary] = None
+    rows: List[ReconciliationRow] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)

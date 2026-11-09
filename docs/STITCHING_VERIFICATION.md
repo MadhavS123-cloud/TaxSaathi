@@ -1,5 +1,7 @@
 # Backend-Frontend Stitching Verification Checklist
 
+This checklist is historical. The live contract is [API_CONTRACT.md](API_CONTRACT.md). The frontend client is `frontend/src/lib/api.js`. `frontend/src/services/api.ts` has been removed.
+
 ## ✅ Backend Setup Verified
 
 ### Route Files Created

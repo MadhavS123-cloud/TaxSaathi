@@ -1,9 +1,10 @@
-import os
 import chromadb
 from chromadb.utils import embedding_functions
 
+from config import chroma_persist_dir
+
 # 1. Connect to ChromaDB
-db_dir = os.path.join("data", "chroma_db")
+db_dir = str(chroma_persist_dir())
 client = chromadb.PersistentClient(path=db_dir)
 embedding_fn = embedding_functions.DefaultEmbeddingFunction()
 

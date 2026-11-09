@@ -1,10 +1,12 @@
 # Quick Run Commands - TaxSaathi
 
+Live HTTP routes are documented in [API_CONTRACT.md](API_CONTRACT.md). Run these commands from the repo root unless a block already `cd`s.
+
 ## Backend
 
 ### Start Backend Server
 ```bash
-cd TaxSaathi/backend
+cd backend
 python -m uvicorn main:app --reload --port 8000
 ```
 
@@ -16,7 +18,7 @@ INFO:     Application startup complete
 
 ### Alternative: With Venv Activation
 ```bash
-cd TaxSaathi/backend
+cd backend
 .\venv\Scripts\Activate.ps1
 python -m uvicorn main:app --reload --port 8000
 ```
@@ -37,7 +39,7 @@ curl http://127.0.0.1:8000/health
 
 ### Start Frontend Server (New Terminal)
 ```bash
-cd TaxSaathi/frontend
+cd frontend
 npm run dev
 ```
 
@@ -48,7 +50,7 @@ Local:   http://localhost:5173/
 
 ### Install Dependencies (if needed)
 ```bash
-cd TaxSaathi/frontend
+cd frontend
 npm install
 ```
 
@@ -58,13 +60,13 @@ npm install
 
 ### Terminal 1 - Backend
 ```bash
-cd TaxSaathi/backend
+cd backend
 python -m uvicorn main:app --reload --port 8000
 ```
 
 ### Terminal 2 - Frontend
 ```bash
-cd TaxSaathi/frontend
+cd frontend
 npm run dev
 ```
 
@@ -143,7 +145,7 @@ python -m uvicorn main:app --port 8001
 ### Module Not Found
 ```bash
 # Use full python path with venv
-cd TaxSaathi/backend
+cd backend
 .\venv\Scripts\python.exe -m uvicorn main:app --port 8000
 ```
 
@@ -162,14 +164,14 @@ curl http://127.0.0.1:8000/health
 
 ### Step 1: Start Backend (Terminal 1)
 ```bash
-cd TaxSaathi/backend
+cd backend
 python -m uvicorn main:app --reload --port 8000
 # Wait for "Application startup complete"
 ```
 
 ### Step 2: Start Frontend (Terminal 2)
 ```bash
-cd TaxSaathi/frontend
+cd frontend
 npm run dev
 # Wait for "Local: http://localhost:5173/"
 ```
@@ -190,7 +192,7 @@ http://localhost:5173
 
 Backend:
 ```
-TaxSaathi/backend/
+backend/
 ├── main.py
 ├── requirements.txt
 ├── .env
@@ -199,7 +201,7 @@ TaxSaathi/backend/
 
 Frontend:
 ```
-TaxSaathi/frontend/
+frontend/
 ├── package.json
 ├── src/
 │   ├── App.jsx

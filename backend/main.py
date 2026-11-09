@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 import logging
 
@@ -8,13 +8,16 @@ from sqlalchemy import text
 
 from db.session import engine, Base, SessionLocal
 from routes.auth import router as auth_router
-from routes.extract import router as extract_router
+from routes.clients import router as clients_router
+from routes.cases import router as cases_router
+from routes.documents import router as documents_router
 from routes.reconciliation import router as reconciliation_router
 from routes.advisory import router as advisory_router
-from routes.cases import router as cases_router
-from routes.activities import router as activities_router
-from routes.documents import router as documents_router
 from routes.dashboard import router as dashboard_router
+from routes.activities import router as activities_router
+from routes.review import router as review_router
+from routes.extract import router as extract_router
+from routes.draft import router as draft_router
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +25,7 @@ logger = logging.getLogger(__name__)
 ENV = os.getenv("ENV", "development").lower()
 IS_DEV = ENV == "development"
 
-# JWT guard only — startup no longer requires Google credentials
+# JWT guard
 _jwt_secret = os.getenv("JWT_SECRET", "")
 if not _jwt_secret and not IS_DEV:
     logger.critical("JWT_SECRET is not set. Refusing to start in production.")
@@ -31,8 +34,8 @@ elif not _jwt_secret:
     logger.warning("JWT_SECRET not set — protected routes will return HTTP 500.")
 
 # Docs visibility
-_docs_url    = "/docs"         if IS_DEV else None
-_redoc_url   = "/redoc"        if IS_DEV else None
+_docs_url = "/docs" if IS_DEV else None
+_redoc_url = "/redoc" if IS_DEV else None
 _openapi_url = "/openapi.json" if IS_DEV else None
 
 # FastAPI app
@@ -45,7 +48,12 @@ app = FastAPI(
 
 # CORS
 _DEFAULT_PROD_ORIGIN = "https://tax-saathi-gamma.vercel.app"
-_DEFAULT_DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+_DEFAULT_DEV_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
 
 _env_origins_raw = os.getenv("CORS_ALLOWED_ORIGINS", "")
 _extra_origins = [o.strip() for o in _env_origins_raw.split(",") if o.strip()]
@@ -58,30 +66,36 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Routers
+# Mount all routers
 app.include_router(auth_router)
-app.include_router(extract_router)
+app.include_router(clients_router)
+app.include_router(cases_router)
+app.include_router(documents_router)
 app.include_router(reconciliation_router)
 app.include_router(advisory_router)
-app.include_router(cases_router)
-app.include_router(activities_router)
-app.include_router(documents_router)
 app.include_router(dashboard_router)
+app.include_router(activities_router)
+app.include_router(review_router)
+app.include_router(extract_router)
+app.include_router(draft_router)
 
-# Create DB tables on startup
+# Auto-create tables on startup
 Base.metadata.create_all(bind=engine)
 
 # Ensure upload directory exists
+_this_dir = os.path.dirname(os.path.abspath(__file__))
+_root_dir = os.path.dirname(_this_dir)
+os.makedirs(os.path.join(_root_dir, "data", "uploads"), exist_ok=True)
 os.makedirs("data/uploads", exist_ok=True)
 
 
 @app.get("/health")
 def health():
-    """Public health probe."""
+    """Public health probe required by Step 2."""
     db_ok = False
     try:
         db = SessionLocal()
@@ -91,7 +105,7 @@ def health():
     except Exception:
         pass
 
-    gemini_key = bool(os.getenv("GEMINI_API_KEY", ""))
+    gemini_key = bool(os.getenv("GEMINI_API_KEY", "").strip())
 
     chroma_loaded = False
     try:

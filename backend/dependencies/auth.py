@@ -1,46 +1,54 @@
-﻿"""
-dependencies/auth.py - JWT authentication dependency.
-
-require_jwt_user():
-  Returns the caller email (str).
-
-get_current_user():
-  Returns the User ORM object (needed for firm_id scoping).
 """
+dependencies/auth.py - JWT authentication dependencies for TaxSaathi.
+
+Exports:
+- get_current_user: Returns User ORM model (with user.id, user.firm_id, etc.).
+- require_jwt_user: Returns user email string (for backwards compatibility).
+"""
+
 import os
 import logging
+from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
+import jwt
+
+from db.session import get_db
+from db.models import User
 
 logger = logging.getLogger(__name__)
 
+# auto_error=False allows us to customize the exact 401 error message JSON
 _bearer = HTTPBearer(auto_error=False)
 
 
-def require_jwt_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
-) -> str:
-    """Verify HS256 JWT and return the caller email."""
-    import jwt
-
-    secret = os.getenv("JWT_SECRET", "")
+def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> User:
+    """
+    Authenticate the caller using the Bearer JWT token in Authorization header.
+    Returns the User ORM object with its associated firm_id.
+    """
+    secret = os.getenv("JWT_SECRET", "").strip()
     if not secret:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Server misconfiguration: JWT_SECRET not set.",
         )
 
-    if credentials is None:
+    if credentials is None or not credentials.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authorization header missing.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    token = credentials.credentials
     try:
         payload = jwt.decode(
-            credentials.credentials,
+            token,
             secret,
             algorithms=["HS256"],
         )
@@ -58,24 +66,26 @@ def require_jwt_user(
         )
 
     email = payload.get("sub")
-    if not email:
+    uid = payload.get("uid")
+
+    user = None
+    if uid:
+        user = db.query(User).filter(User.id == str(uid)).first()
+    if not user and email:
+        user = db.query(User).filter(User.email == email.strip().lower()).first()
+
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token missing subject claim.",
+            detail="User not found or session invalid.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    return email.strip().lower()
+    return user
 
 
-def get_current_user(
-    caller: str = Depends(require_jwt_user),
-    db: "Session" = None,
-):
-    """Return the User ORM row for the authenticated caller."""
-    # Import here to avoid circular imports at module load
-    from db.session import get_db
-    from db.models import User
-
-    # db injected via the route — this dependency is used with Depends(get_current_user_dep)
-    return caller
+def require_jwt_user(
+    current_user: User = Depends(get_current_user),
+) -> str:
+    """Return the authenticated caller email string (backward compatibility)."""
+    return current_user.email

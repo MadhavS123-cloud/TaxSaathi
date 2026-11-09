@@ -1,12 +1,14 @@
 # TaxSaathi Backend-Frontend Integration Guide
 
+The live route contract is [API_CONTRACT.md](API_CONTRACT.md). The frontend client is `frontend/src/lib/api.js`.
+
 ## Quick Start
 
 ### Backend Setup (Terminal 1)
 
 ```bash
 # Navigate to backend
-cd TaxSaathi/backend
+cd backend
 
 # Install dependencies (if not already done)
 pip install -r requirements.txt
@@ -27,7 +29,7 @@ Uvicorn running on http://127.0.0.1:8000
 
 ```bash
 # Navigate to frontend
-cd TaxSaathi/frontend
+cd frontend
 
 # Install dependencies (if not already done)
 npm install
@@ -91,7 +93,7 @@ Local:   http://localhost:5173/
 **URL**: http://localhost:5173/app/extract (or through invoice review flow)
 
 **How to Test**:
-1. Upload invoice image: `TaxSaathi/data/sample_invoices/`
+1. Upload invoice image: `data/sample_invoices/`
 2. View extracted fields:
    - Vendor/supplier info
    - Line items with HSN/SAC codes

@@ -4,10 +4,10 @@ from typing import List
 from pydantic import BaseModel
 
 from db.session import get_db
-from db.models import Activity
-from dependencies.auth import require_jwt_user
+from db.models import Activity, User
+from dependencies.auth import get_current_user
 
-router = APIRouter(prefix="/activities", tags=["activities"])
+router = APIRouter(prefix="/activities", tags=["Activities"])
 
 
 class ActivityResponse(BaseModel):
@@ -21,18 +21,31 @@ class ActivityResponse(BaseModel):
         from_attributes = True
 
 
-@router.get("/", response_model=List[ActivityResponse])
+@router.get("", response_model=List[ActivityResponse])
+@router.get("/", response_model=List[ActivityResponse], include_in_schema=False)
 def get_activities(
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    caller: str = Depends(require_jwt_user),
 ):
-    """Return only the activities belonging to the authenticated user."""
-    activities = (
-        db.query(Activity)
-        .filter(Activity.owner == caller)
-        .order_by(Activity.timestamp.desc())
-        .all()
-    )
+    """Return activities belonging to the authenticated user's firm."""
+    firm_id = current_user.firm_id
+    if firm_id:
+        activities = (
+            db.query(Activity)
+            .filter(Activity.firm_id == firm_id)
+            .order_by(Activity.timestamp.desc())
+            .limit(20)
+            .all()
+        )
+    else:
+        activities = (
+            db.query(Activity)
+            .filter(Activity.owner == current_user.email)
+            .order_by(Activity.timestamp.desc())
+            .limit(20)
+            .all()
+        )
+
     results = []
     for a in activities:
         results.append({
@@ -40,6 +53,6 @@ def get_activities(
             "type": a.type,
             "client": a.client,
             "description": a.description,
-            "timestamp": "Just now",
+            "timestamp": a.timestamp.strftime("%Y-%m-%d %H:%M") if a.timestamp else "Just now",
         })
     return results

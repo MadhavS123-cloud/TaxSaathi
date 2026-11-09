@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutGrid, List, CheckCircle, AlertCircle, Clock, Users, Search, ChevronDown, Calendar, Trash2 } from 'lucide-react';
+import { LayoutGrid, List, CheckCircle, AlertCircle, Clock, Users, Search, ChevronDown, Calendar, Trash2, UserPlus } from 'lucide-react';
 import MetricCard from '../components/ui/MetricCard';
 import DataTable from '../components/ui/DataTable';
 import StatusTag from '../components/ui/StatusTag';
@@ -8,17 +8,24 @@ import PrimaryButton from '../components/ui/PrimaryButton';
 import SecondaryButton from '../components/ui/SecondaryButton';
 import ActivityFeed from '../components/dashboard/ActivityFeed';
 import NewCaseModal from '../components/dashboard/NewCaseModal';
+import NewClientModal from '../components/dashboard/NewClientModal';
+import { api } from '../lib/api';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
 
-  // 1. Cases State (Defaults to empty array, persistent via API)
   const [cases, setCases] = useState([]);
-
-  // 2. Activity Feed State (Defaults to empty array, persistent via API)
   const [activities, setActivities] = useState([]);
+  const [summary, setSummary] = useState({
+    active_engagements: 0,
+    matched: 0,
+    unmatched: 0,
+    pending: 0,
+    total_documents: 0,
+  });
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCaseModalOpen, setIsCaseModalOpen] = useState(false);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
@@ -26,12 +33,16 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      const [casesRes, activitiesRes] = await Promise.all([
-        fetch('http://localhost:8000/cases'),
-        fetch('http://localhost:8000/activities')
+      const [casesRes, activitiesRes, summaryRes] = await Promise.all([
+        api.cases.list().catch(() => []),
+        api.activities.list().catch(() => []),
+        api.dashboard.summary().catch(() => null),
       ]);
-      if (casesRes.ok) setCases(await casesRes.json());
-      if (activitiesRes.ok) setActivities(await activitiesRes.json());
+      setCases(casesRes || []);
+      setActivities(activitiesRes || []);
+      if (summaryRes) {
+        setSummary(summaryRes);
+      }
     } catch (e) {
       console.error("Failed to fetch dashboard data:", e);
     } finally {
@@ -45,30 +56,36 @@ export default function DashboardPage() {
 
   const handleCreateCase = async (newCaseData) => {
     try {
-      const response = await fetch('http://localhost:8000/cases', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client: newCaseData.client,
-          scope: newCaseData.scope,
-          gstin: newCaseData.gstin,
-          status: newCaseData.status,
-          reconciliation: newCaseData.reconciliation
-        })
+      await api.cases.create({
+        client: newCaseData.client,
+        scope: newCaseData.scope,
+        title: newCaseData.title,
+        gstin: newCaseData.gstin,
+        pan: newCaseData.pan,
+        assessment_year: newCaseData.assessment_year,
+        status: newCaseData.status,
       });
-      if (response.ok) {
-        await fetchDashboardData(); // Refresh list to get real ID and logs
-      }
+      await fetchDashboardData();
     } catch (e) {
       console.error("Failed to create case:", e);
     }
   };
 
+  const handleCreateClient = async (newClientData) => {
+    try {
+      await api.clients.create(newClientData);
+      await fetchDashboardData();
+    } catch (e) {
+      console.error("Failed to create client:", e);
+    }
+  };
+
   const handleClearAll = async () => {
     try {
-      await fetch('http://localhost:8000/cases', { method: 'DELETE' });
+      await api.cases.deleteAll();
       setCases([]);
       setActivities([]);
+      await fetchDashboardData();
     } catch (e) {
       console.error("Failed to clear cases:", e);
     }
@@ -76,57 +93,70 @@ export default function DashboardPage() {
 
   // Filtered cases
   const filteredCases = cases.filter((c) => {
-    const matchesSearch = 
-      c.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.scope.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (c.gstin && c.gstin.toLowerCase().includes(searchQuery.toLowerCase()));
+    const clientName = c.client || '';
+    const scopeStr = c.scope || c.title || '';
+    const gstinStr = c.gstin || '';
 
-    const matchesStatus = 
+    const matchesSearch =
+      clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      scopeStr.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      gstinStr.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesStatus =
       statusFilter === 'ALL' || c.status.toLowerCase() === statusFilter.toLowerCase();
 
     return matchesSearch && matchesStatus;
   });
 
-  // Calculate dynamic metrics
-  const totalMatched = cases.reduce((acc, curr) => acc + (curr.reconciliation?.matched || 0), 0);
-  const totalExceptions = cases.reduce((acc, curr) => acc + (curr.reconciliation?.exception || 0), 0);
-  const totalPending = cases.reduce((acc, curr) => acc + (curr.reconciliation?.pending || 0), 0);
-  const totalEntries = totalMatched + totalExceptions + totalPending;
-  const matchRatio = totalEntries > 0 ? ((totalMatched / totalEntries) * 100).toFixed(1) : '0.0';
+  const totalEntries = (summary.matched || 0) + (summary.unmatched || 0) + (summary.pending || 0);
+  const matchRatio = totalEntries > 0
+    ? (((summary.matched || 0) / totalEntries) * 100).toFixed(1)
+    : '0.0';
 
   const COLUMNS = [
-    { 
-      header: 'Client / Scope', 
+    {
+      header: 'Client / Scope',
       cell: (row) => (
         <div className="flex flex-col gap-1">
           <span className="font-sans font-medium text-ink">{row.client}</span>
           <span className="font-sans text-xs text-ink-muted flex items-center gap-2">
-            {row.scope}
+            {row.scope || row.title}
             {row.gstin && (
               <span className="text-[9px] font-mono border border-hairline px-1 py-0.2 bg-paper/60 uppercase">
                 {row.gstin}
+              </span>
+            )}
+            {row.assessment_year && (
+              <span className="text-[9px] font-mono border border-hairline px-1 py-0.2 bg-paper-raised text-ink-muted">
+                AY {row.assessment_year}
               </span>
             )}
           </span>
         </div>
       )
     },
-    { 
-      header: 'Status', 
-      cell: (row) => <StatusTag status={row.status} label={row.status} /> 
+    {
+      header: 'Status',
+      cell: (row) => <StatusTag status={row.status.toLowerCase()} label={row.status} />
     },
-    { 
-      header: 'Last Updated', 
-      accessor: 'lastUpdated', 
-      type: 'mono' 
+    {
+      header: 'Last Updated',
+      accessor: 'lastUpdated',
+      type: 'mono'
     },
     {
       header: 'Reconciliation',
       cell: (row) => (
         <div className="flex items-center gap-3 text-xs font-mono">
-          <span className="text-forest flex items-center gap-1" title="Matched"><CheckCircle size={10} /> {row.reconciliation?.matched || 0}</span>
-          <span className="text-rust flex items-center gap-1" title="Exceptions"><AlertCircle size={10} /> {row.reconciliation?.exception || 0}</span>
-          <span className="text-amber-flag flex items-center gap-1" title="Pending"><Clock size={10} /> {row.reconciliation?.pending || 0}</span>
+          <span className="text-forest flex items-center gap-1" title="Matched">
+            <CheckCircle size={10} /> {row.reconciliation?.matched || 0}
+          </span>
+          <span className="text-rust flex items-center gap-1" title="Exceptions">
+            <AlertCircle size={10} /> {row.reconciliation?.exception || 0}
+          </span>
+          <span className="text-amber-flag flex items-center gap-1" title="Pending">
+            <Clock size={10} /> {row.reconciliation?.pending || 0}
+          </span>
         </div>
       )
     },
@@ -134,11 +164,11 @@ export default function DashboardPage() {
       header: 'Action',
       align: 'right',
       cell: (row) => (
-        <SecondaryButton 
-          onClick={() => navigate(`/app/cases/${row.id}/upload`)} 
+        <SecondaryButton
+          onClick={() => navigate(`/app/cases/${row.id}/upload`)}
           className="!py-1.5 !px-3 !text-xs hover:border-brass"
         >
-          Open
+          Open Case
         </SecondaryButton>
       )
     }
@@ -146,7 +176,7 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-[1400px] mx-auto flex flex-col gap-8 pb-12">
-      
+
       {/* 1. Page Header Row */}
       <div className="flex items-start justify-between">
         <div>
@@ -166,44 +196,47 @@ export default function DashboardPage() {
               <Trash2 size={14} className="inline mr-1.5 text-rust" /> Clear All
             </SecondaryButton>
           )}
-          <PrimaryButton onClick={() => setIsModalOpen(true)}>
-            + New Client Case
+          <SecondaryButton onClick={() => setIsClientModalOpen(true)}>
+            <UserPlus size={14} className="inline mr-1.5 text-ink-muted" /> + New Client
+          </SecondaryButton>
+          <PrimaryButton onClick={() => setIsCaseModalOpen(true)}>
+            + Create New Case
           </PrimaryButton>
         </div>
       </div>
 
-      {/* 2. Metrics Row */}
+      {/* 2. Metrics Row computed from DB summary */}
       <div className="relative">
         <div className="absolute -top-7 right-0 text-xs font-mono text-ink-muted">
           Overall Match Ratio: <span className="text-ink font-medium">{matchRatio}%</span>
         </div>
         <div className="grid grid-cols-4 gap-6">
-          <MetricCard 
-            label="Matched Entries" 
-            value={totalMatched.toLocaleString()} 
+          <MetricCard
+            label="Matched Entries"
+            value={summary.matched.toLocaleString()}
             isMonoValue={true}
-            icon={CheckCircle} 
+            icon={CheckCircle}
             subLabel="verified"
           />
-          <MetricCard 
-            label="Unmatched Variances" 
-            value={totalExceptions.toLocaleString()} 
+          <MetricCard
+            label="Unmatched Variances"
+            value={summary.unmatched.toLocaleString()}
             isMonoValue={true}
-            icon={AlertCircle} 
+            icon={AlertCircle}
             subLabel="exceptions"
           />
-          <MetricCard 
-            label="Timing Variances" 
-            value={totalPending.toLocaleString()} 
+          <MetricCard
+            label="Timing Variances"
+            value={summary.pending.toLocaleString()}
             isMonoValue={true}
-            icon={Clock} 
+            icon={Clock}
             subLabel="in transit"
           />
-          <MetricCard 
-            label="Active Engagements" 
-            value={cases.length.toString()} 
+          <MetricCard
+            label="Active Engagements"
+            value={(summary.active_engagements || cases.length).toString()}
             isMonoValue={true}
-            icon={Users} 
+            icon={Users}
             subLabel="clients"
           />
         </div>
@@ -214,23 +247,23 @@ export default function DashboardPage() {
         <div className="flex items-center gap-4 flex-1">
           <div className="relative flex-1 max-w-md">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" strokeWidth={1.5} />
-            <input 
-              type="text" 
-              placeholder="Search by legal entity name, GSTIN, or PAN..." 
+            <input
+              type="text"
+              placeholder="Search by legal entity name, GSTIN, or PAN..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-paper border border-hairline rounded-[2px] text-xs font-sans focus:outline-none focus:border-brass text-ink placeholder:text-ink-muted"
             />
           </div>
-          
+
           <div className="relative">
-            <button 
+            <button
               onClick={() => setIsStatusMenuOpen(!isStatusMenuOpen)}
               className="flex items-center gap-2 px-4 py-2 bg-paper border border-hairline rounded-[2px] text-xs font-sans text-ink hover:border-brass/50 transition-colors uppercase font-mono"
             >
               Status: {statusFilter} <ChevronDown size={14} className="text-ink-muted" />
             </button>
-            
+
             {isStatusMenuOpen && (
               <div className="absolute top-full left-0 mt-1 w-36 bg-paper-raised border border-hairline shadow-lg z-20 py-1 rounded-[2px]">
                 {['ALL', 'MATCHED', 'PENDING', 'EXCEPTION'].map((st) => (
@@ -276,23 +309,33 @@ export default function DashboardPage() {
           {filteredCases.length === 0 ? (
             <div className="py-12 text-center border border-dashed border-hairline bg-paper/50 rounded-[2px]">
               <p className="text-sm font-sans text-ink-muted mb-3">No active client cases. Click below to add your first client case.</p>
-              <PrimaryButton onClick={() => setIsModalOpen(true)}>+ Create New Case</PrimaryButton>
+              <div className="flex justify-center gap-3">
+                <SecondaryButton onClick={() => setIsClientModalOpen(true)}>+ New Client</SecondaryButton>
+                <PrimaryButton onClick={() => setIsCaseModalOpen(true)}>+ Create New Case</PrimaryButton>
+              </div>
             </div>
           ) : (
             <DataTable columns={COLUMNS} data={filteredCases} />
           )}
         </div>
-        
+
         <div className="w-[30%] sticky top-[96px]">
           <ActivityFeed activities={activities} />
         </div>
       </div>
 
       {/* New Case Modal */}
-      <NewCaseModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+      <NewCaseModal
+        isOpen={isCaseModalOpen}
+        onClose={() => setIsCaseModalOpen(false)}
         onCreateCase={handleCreateCase}
+      />
+
+      {/* New Client Modal */}
+      <NewClientModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        onCreateClient={handleCreateClient}
       />
 
     </div>

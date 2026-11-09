@@ -1,0 +1,20 @@
+---
+description: Product name is TaxSaathi. Do not rename it to CA Tax Copilot.
+alwaysApply: true
+---
+
+# Product name
+
+The product name is **TaxSaathi**. Use that exact spelling in code, UI copy, API titles, prompts, comments, and docs.
+
+```text
+// ❌ BAD
+title="CA Tax Copilot API"
+<h1>CA Tax Copilot</h1>
+
+// ✅ GOOD
+title="TaxSaathi API"
+<h1>TaxSaathi</h1>
+```
+
+Do not rename TaxSaathi to "CA Tax Copilot", "Tax Copilot", or "Copilot". The workspace folder may stay `CA-Tax-Copilot`; that path is not the product name.

@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="w-6 h-6 bg-ink text-paper flex items-center justify-center font-serif font-bold text-sm rounded-sm">
-              TS
+              CA
             </div>
             <span className="text-ink font-serif tracking-wide">TaxSaathi</span>
           </div>

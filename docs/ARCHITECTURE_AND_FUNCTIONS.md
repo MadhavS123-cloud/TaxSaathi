@@ -1,6 +1,8 @@
-# TaxSaathi - Comprehensive Codebase & Functionality Reference
+# TaxSaathi - Codebase Notes
 
-This document provides a complete file-by-file and function-by-function reference of the **TaxSaathi** codebase.
+The live HTTP contract is [API_CONTRACT.md](API_CONTRACT.md). The frontend client is `frontend/src/lib/api.js`. Model ids come from `GEMINI_EXTRACT_MODEL` and `GEMINI_ADVISORY_MODEL` (`backend/config.py`). Sections below that still name `src/services/api.ts` or `gemini-3.6-flash` are older notes.
+
+This document is a file-by-file reference of the **TaxSaathi** codebase.
 
 ---
 
@@ -8,7 +10,7 @@ This document provides a complete file-by-file and function-by-function referenc
 
 ### `backend/main.py`
 The entry point for the FastAPI backend server.
-- **`app = FastAPI(title="TaxSaathi API")`**: Instantiates the FastAPI application.
+- **`app = FastAPI(title="TaxSaathi API")`**: Instantiates the FastAPI application. Mounted routers: auth, clients, cases, documents, extract, reconciliation, advisory, dashboard, activities, review.
 - **`CORSMiddleware`**: Configures Cross-Origin Resource Sharing allowing requests from `http://localhost:5173` and `http://127.0.0.1:5173`.
 - **`@app.get("/health")`**: Health check endpoint returning `{"status": "ok"}` to verify backend server status.
 - **`app.include_router(extract_router)`**: Mounts `/api` routes from `routes/extract.py`.

@@ -4,6 +4,7 @@ const MATCH_TYPES = {
   exact_reference: { label: "Exact Reference", colorClass: "text-forest bg-forest/10 border-forest/20" },
   exact_amount_date: { label: "Exact Amount & Date", colorClass: "text-charcoal bg-charcoal/10 border-charcoal/20" },
   fuzzy_amount_date: { label: "Fuzzy Match", colorClass: "text-brass-deep bg-brass/10 border-brass/30" },
+  partial_payment: { label: "Partial Payment", colorClass: "text-brass-deep bg-brass/10 border-brass/30" },
   unmatched_invoice: { label: "Unmatched Invoice", colorClass: "text-rust bg-rust/10 border-rust/20" },
   unmatched_payment: { label: "Unmatched Payment", colorClass: "text-rust bg-rust/10 border-rust/20" },
 };
@@ -129,6 +130,9 @@ export default function ReconciliationPanel({
                   <span>Fuzzy Matches:</span> <span className="text-ink">{summary.fuzzy_matches}</span>
                 </div>
                 <div className="flex justify-between">
+                  <span>Partial:</span> <span className="text-ink">{summary.partial_payment_matches ?? 0}</span>
+                </div>
+                <div className="flex justify-between">
                   <span>Unmatched (Inv/Pay):</span> <span className="text-rust">{summary.unmatched_invoices} / {summary.unmatched_payments}</span>
                 </div>
               </div>
@@ -177,7 +181,11 @@ export default function ReconciliationPanel({
               <tbody className="divide-y divide-hairline">
                 {filteredRows.map((row, idx) => {
                   const isExpanded = expandedRows.has(idx);
-                  const typeConfig = MATCH_TYPES[row.match_type];
+                  const typeConfig = MATCH_TYPES[row.match_type] || {
+                    label: row.match_type,
+                    colorClass: "text-ink bg-paper border-hairline",
+                  };
+                  const partialPayments = row.payments?.length ? row.payments : [];
                   return (
                     <React.Fragment key={idx}>
                       <tr
@@ -197,8 +205,12 @@ export default function ReconciliationPanel({
                         <td className="py-3 px-4 font-mono text-xs truncate max-w-[200px]">
                           {row.invoice ? `${row.invoice.amount} (${row.invoice.date})` : "—"}
                         </td>
-                        <td className="py-3 px-4 font-mono text-xs truncate max-w-[200px]">
-                          {row.payment ? `${row.payment.amount} (${row.payment.date})` : "—"}
+                        <td className="py-3 px-4 font-mono text-xs truncate max-w-[240px]">
+                          {row.match_type === "partial_payment"
+                            ? `${partialPayments.length || row.payment_ids?.length || 0} payments · shortfall ${row.shortfall ?? "—"}`
+                            : row.payment
+                              ? `${row.payment.amount} (${row.payment.date})`
+                              : "—"}
                         </td>
                       </tr>
                       {isExpanded && (
@@ -224,7 +236,23 @@ export default function ReconciliationPanel({
                               {/* Payment Details */}
                               <div>
                                 <h4 className="font-serif text-sm text-ink-muted mb-3 border-b border-hairline pb-1">Payment Record</h4>
-                                {row.payment ? (
+                                {row.match_type === "partial_payment" ? (
+                                  <div className="space-y-3">
+                                    <dl className="grid grid-cols-[100px_1fr] gap-y-2">
+                                      <dt className="text-taupe">Total paid:</dt><dd>{row.total_paid ?? "—"}</dd>
+                                      <dt className="text-taupe">Shortfall:</dt><dd>{row.shortfall ?? "—"}</dd>
+                                    </dl>
+                                    <ul className="space-y-1 border-t border-hairline pt-2">
+                                      {(partialPayments.length ? partialPayments : (row.payment_ids || []).map((id) => ({ id }))).map((pay) => (
+                                        <li key={pay.id}>
+                                          {pay.id}
+                                          {pay.amount ? ` · ${pay.amount}` : ""}
+                                          {pay.date ? ` · ${pay.date}` : ""}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ) : row.payment ? (
                                   <dl className="grid grid-cols-[100px_1fr] gap-y-2">
                                     <dt className="text-taupe">ID:</dt><dd>{row.payment.id}</dd>
                                     <dt className="text-taupe">Date:</dt><dd>{row.payment.date}</dd>

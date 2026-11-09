@@ -1,7 +1,9 @@
 import os
 import chromadb
 
-db_dir = os.path.join("data", "chroma_db")
+from config import chroma_persist_dir
+
+db_dir = str(chroma_persist_dir())
 print(f"Checking ChromaDB directory: {db_dir}")
 
 if not os.path.exists(db_dir):

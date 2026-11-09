@@ -6,7 +6,7 @@ Endpoints:
   POST /auth/login     — returns JWT {access_token, token_type, user, firm}
 
 JWT: HS256, 8h expiry, secret from JWT_SECRET env var.
-Passwords: bcrypt via passlib.
+Passwords: bcrypt.
 """
 import os
 import logging
@@ -16,7 +16,7 @@ import jwt
 import bcrypt
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 from db.session import get_db
 from db.models import User, Firm
@@ -27,12 +27,12 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 def _hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def _verify_password(password: str, hashed: str) -> bool:
     try:
-        return bcrypt.checkpw(password.encode(), hashed.encode())
+        return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
     except Exception:
         return False
 
@@ -54,7 +54,7 @@ class LoginRequest(BaseModel):
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _jwt_secret() -> str:
-    secret = os.getenv("JWT_SECRET", "")
+    secret = os.getenv("JWT_SECRET", "").strip()
     if not secret:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -68,7 +68,7 @@ def _make_token(email: str, user_id: str) -> str:
     now = datetime.now(tz=timezone.utc)
     payload = {
         "sub": email.strip().lower(),
-        "uid": user_id,
+        "uid": str(user_id),
         "iat": now,
         "exp": now + timedelta(hours=8),
     }
@@ -82,6 +82,16 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
     """Create a new firm and its first user."""
     email = body.email.strip().lower()
 
+    if not body.name.strip():
+        raise HTTPException(status_code=422, detail="Name cannot be empty.")
+    if not body.firm_name.strip():
+        raise HTTPException(status_code=422, detail="Firm name cannot be empty.")
+    if len(body.password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Password must be at least 8 characters.",
+        )
+
     # Check for duplicate email
     if db.query(User).filter(User.email == email).first():
         raise HTTPException(
@@ -89,16 +99,10 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
             detail="An account with this email already exists.",
         )
 
-    if len(body.password) < 8:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Password must be at least 8 characters.",
-        )
-
     # Create firm
     firm = Firm(name=body.firm_name.strip())
     db.add(firm)
-    db.flush()  # get firm.id before committing
+    db.flush()
 
     # Create user
     user = User(

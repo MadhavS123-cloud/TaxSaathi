@@ -1,6 +1,8 @@
-# TaxSaathi - AI-Powered Statutory Audit & Tax Reconciliation Platform
+# TaxSaathi
 
-**TaxSaathi** is an intelligent web application designed for Indian Chartered Accountants, auditors, and tax professionals. It streamlines statutory audits, document OCR extractions (using Google Gemini AI), GST ledger reconciliations, and tax advisory RAG inquiries.
+**TaxSaathi** is a pre-accounting workspace for Indian Chartered Accountant firms. It drafts invoice extraction, ledger reconciliation, and statute-grounded tax answers. A CA reviews every output before it is used.
+
+The HTTP contract is [docs/API_CONTRACT.md](docs/API_CONTRACT.md).
 
 ---
 
@@ -11,7 +13,7 @@
 - **Styling**: Modern CSS design system with custom tokens (`src/styles/tokens.css`, Tailwind CSS v4)
 - **Icons**: Lucide React
 - **Backend API**: FastAPI (Python 3.13) + Uvicorn server
-- **AI Document OCR Engine**: Google Gemini AI (`gemini-3.6-flash`)
+- **AI Document OCR Engine**: Google Gemini. `GEMINI_MODEL_EXTRACT` and `GEMINI_MODEL_ADVISORY` both default to `gemini-3.8-flash` (see `backend/config.py`).
 - **RAG & Vector Database**: ChromaDB + Gemini Embeddings
 
 ---
@@ -30,7 +32,7 @@
              │                        │                       │
              ▼                        ▼                       ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                      SERVICE LAYER (src/services/api.ts)                │
+│                      SERVICE LAYER (src/lib/api.js)                     │
 └─────────────────────────────────────┬───────────────────────────────────┘
                                       │ HTTP Multipart POST /api/extract
                                       ▼
@@ -58,8 +60,8 @@
 | **Case Dashboard** | `DashboardPage.jsx` | Audit engagements pipeline, dynamic metrics recalculation, live search/filtering, modal case creator. |
 | **Document Upload & OCR** | `UploadPage.jsx` | Multipart drag-and-drop document queue with progress tracking and Gemini AI processing. |
 | **Invoice Data Review** | `InvoiceReviewPage.jsx` | Split-screen auditor verification studio displaying real Gemini-extracted line items and tax breakdown. |
-| **Ledger Reconciliation** | `ReconcilePage.jsx` | Bank vs. GSTR-2B / Purchase ledger variance matching engine. |
-| **Tax Advisory Chat** | `AdvisoryPage.jsx` | RAG-based statutory AI Q&A backed by ChromaDB tax corpus and section citations. |
+| **Ledger Reconciliation** | `Reconciliation.jsx` | Invoice vs bank/payment matching. |
+| **Tax Advisory Chat** | `Advisory.jsx` | RAG answers grounded in the Income Tax Act 2025, CGST Act, and IGST Act. |
 
 ---
 

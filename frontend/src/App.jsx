@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import CustomCursor from './components/ui/CustomCursor';
-import { isAuthenticated } from './hooks/useAuth';
+import { isAuthenticated } from './lib/api';
 
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
@@ -9,23 +9,20 @@ import DashboardPage from './pages/DashboardPage';
 import Cases from './pages/Cases';
 import UploadPage from './pages/UploadPage';
 import InvoiceReviewPage from './pages/InvoiceReviewPage';
-import DocumentProcessing from './pages/DocumentProcessing';
 import Reconciliation from './pages/Reconciliation';
 import Advisory from './pages/Advisory';
 import Drafts from './pages/Drafts';
 import AuditLog from './pages/AuditLog';
+import ReviewApprove from './pages/ReviewApprove';
 
 /**
  * ProtectedRoute — guards all /app/* routes.
  *
  * Checks isAuthenticated() which decodes the JWT exp claim client-side.
- * An expired or missing token redirects immediately to /login without
- * waiting for a 401 from the backend.
- *
- * The backend still validates the JWT on every request; this is defence-
- * in-depth for UX only — it cannot replace server-side verification.
+ * An expired or missing token redirects immediately to /login.
+ * The backend still validates the JWT on every request.
  */
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children }) {
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
   }
@@ -53,19 +50,12 @@ function App() {
           <Route path="cases" element={<Cases />} />
           <Route path="cases/:caseId/upload" element={<UploadPage />} />
           <Route path="cases/:caseId/invoices/:invoiceId/review" element={<InvoiceReviewPage />} />
-          <Route path="extract" element={<DocumentProcessing />} />
+          {/* /app/extract — standalone upload page; prompts user to pick a case */}
+          <Route path="extract" element={<UploadPage />} />
           <Route path="reconcile" element={<Reconciliation />} />
           <Route path="advisory" element={<Advisory />} />
           <Route path="drafts" element={<Drafts />} />
-          <Route path="approve" element={
-            <div className="max-w-6xl mx-auto">
-              <h2 className="text-3xl font-serif text-ink tracking-tight mb-6">Review &amp; Approve</h2>
-              <div className="bg-paper-raised border border-hairline p-8 min-h-[400px] flex flex-col items-center justify-center">
-                <h3 className="text-2xl font-serif text-ink mb-2">Coming soon</h3>
-                <p className="text-ink-muted font-sans">Approval workflows will be built here.</p>
-              </div>
-            </div>
-          } />
+          <Route path="approve" element={<ReviewApprove />} />
           <Route path="audit" element={<AuditLog />} />
         </Route>
       </Routes>

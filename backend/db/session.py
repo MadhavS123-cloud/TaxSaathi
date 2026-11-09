@@ -1,4 +1,4 @@
-﻿import os
+import os
 import logging
 from typing import Generator
 from dotenv import load_dotenv
@@ -11,16 +11,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-load_dotenv()
+# Load .env from backend/ and workspace root
+_this_dir = os.path.dirname(os.path.abspath(__file__))
+_backend_dir = os.path.dirname(_this_dir)       # backend/
+_root_dir = os.path.dirname(_backend_dir)        # repo root
+
+load_dotenv(os.path.join(_backend_dir, ".env"), override=False)
+load_dotenv(os.path.join(_root_dir, ".env"), override=False)
 
 
 def build_database_url():
-    database_url = os.getenv("DATABASE_URL", "")
+    database_url = os.getenv("DATABASE_URL", "").strip()
 
     if not database_url:
-        # Default: SQLite in data/app.db (relative to where uvicorn is run from — backend/)
-        os.makedirs("data", exist_ok=True)
-        return "sqlite:///./data/app.db"
+        # Default: SQLite in data/app.db at root
+        data_dir = os.path.join(_root_dir, "data")
+        os.makedirs(data_dir, exist_ok=True)
+        db_path = os.path.join(data_dir, "app.db").replace("\\", "/")
+        return f"sqlite:///{db_path}"
 
     if database_url.startswith("postgresql://"):
         database_url = database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
@@ -49,8 +57,10 @@ def create_db_engine():
             return eng
         except Exception as e:
             logger.error("PostgreSQL connection failed: %s — falling back to SQLite.", e)
-            os.makedirs("data", exist_ok=True)
-            url = "sqlite:///./data/app.db"
+            data_dir = os.path.join(_root_dir, "data")
+            os.makedirs(data_dir, exist_ok=True)
+            db_path = os.path.join(data_dir, "app.db").replace("\\", "/")
+            url = f"sqlite:///{db_path}"
 
     logger.info("Using SQLite database: %s", url)
     return create_engine(url, connect_args={"check_same_thread": False})
