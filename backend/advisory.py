@@ -73,20 +73,30 @@ def _retryable_groq_error(exc):
 _retryable_gemini_error = _retryable_groq_error
 
 FALLBACK_GROQ_MODELS = (
-    "llama-3.1-8b-instant",
-    "llama3-8b-8192",
-    "mixtral-8x7b-32768",
-    "gemma2-9b-it",
+    "openai/gpt-oss-20b",
+    "openai/gpt-oss-120b",
+    "qwen/qwen3.8-27b",
 )
 
 
-def _is_model_not_found(exc) -> bool:
+def _is_model_unavailable(exc) -> bool:
     err = str(exc).lower()
-    return "404" in err and ("model" in err or "access" in err or "not found" in err)
+    return (
+        "model_not_found" in err
+        or "model_decommissioned" in err
+        or "does not exist or you do not have access" in err
+        or "decommissioned" in err
+        or ("404" in err and "model" in err)
+        or ("400" in err and "model" in err)
+    )
+
+
+# Backward compatibility alias
+_is_model_not_found = _is_model_unavailable
 
 
 def _invoke_with_backoff(chain, payload, *args, **kwargs):
-    """Invoke the advisory chain with retries on 429/503, and automatic fallback on 404 model_not_found."""
+    """Invoke the advisory chain with retries on 429/503, and automatic fallback on model unavailable."""
     top_k = kwargs.get("top_k", 7)
     waits = (1, 2, 4)
     last_error = None
@@ -95,7 +105,7 @@ def _invoke_with_backoff(chain, payload, *args, **kwargs):
             return chain.invoke(payload)
         except Exception as exc:
             last_error = exc
-            if _is_model_not_found(exc):
+            if _is_model_unavailable(exc):
                 for fallback in FALLBACK_GROQ_MODELS:
                     if fallback == GROQ_MODEL_ADVISORY:
                         continue
@@ -112,7 +122,7 @@ def _invoke_with_backoff(chain, payload, *args, **kwargs):
                         return fallback_chain.invoke(payload)
                     except Exception as fallback_exc:
                         last_error = fallback_exc
-                        if not _is_model_not_found(fallback_exc):
+                        if not _is_model_unavailable(fallback_exc):
                             break
                         continue
                 raise last_error
