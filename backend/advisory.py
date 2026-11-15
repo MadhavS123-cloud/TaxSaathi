@@ -1,6 +1,6 @@
 """
-advisory.py  —  TaxSaathi backend (LangChain edition v2)
-=========================================================
+advisory.py  —  TaxSaathi backend (LangChain edition v2 with Groq)
+=================================================================
 Architecture:
   ChromaDB  →  LangChain Retriever (MMR, top_k=7)
                       ↓
@@ -8,7 +8,7 @@ Architecture:
                       ↓
   LangChain ChatPromptTemplate  (CA-grade System + Human messages)
                       ↓
-  ChatGoogleGenerativeAI  (model id from GEMINI_MODEL_ADVISORY)
+  ChatGroq  (model id from GROQ_MODEL_ADVISORY, e.g. llama-3.3-70b-versatile)
                       ↓
   LangChain StrOutputParser  +  custom AdvisoryOutputParser
                       ↓
@@ -34,13 +34,13 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_core.documents import Document
 
-# LangChain Google Gemini integration
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+# LangChain Groq integration
+from langchain_groq import ChatGroq
 
 # LangChain ChromaDB integration
 from langchain_chroma import Chroma
 
-from config import CHROMA_PATH, GEMINI_MODEL_ADVISORY, gemini_api_key
+from config import CHROMA_PATH, GROQ_MODEL_ADVISORY, groq_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -53,18 +53,24 @@ CORPUS_MISS = "The corpus does not contain the answer."
 _llm = None
 
 
-def _retryable_gemini_error(exc):
-    """True for Gemini 429 and 503 responses, including wrapped causes."""
+def _retryable_groq_error(exc):
+    """True for Groq 429 (rate limit) and 503 responses, including wrapped causes."""
     current = exc
     seen = set()
     while current is not None and id(current) not in seen:
         seen.add(id(current))
-        if getattr(current, "code", None) in (429, 503):
+        status_code = getattr(current, "status_code", None) or getattr(current, "code", None)
+        if status_code in (429, 503):
             return True
-        if getattr(current, "status_code", None) in (429, 503):
+        err_msg = str(current).lower()
+        if "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg or "503" in err_msg:
             return True
-        current = current.__cause__
+        current = getattr(current, "__cause__", None)
     return False
+
+
+# Backward compatibility alias
+_retryable_gemini_error = _retryable_groq_error
 
 
 def _invoke_with_backoff(chain, payload):
@@ -76,7 +82,7 @@ def _invoke_with_backoff(chain, payload):
             return chain.invoke(payload)
         except Exception as exc:
             last_error = exc
-            if not _retryable_gemini_error(exc):
+            if not _retryable_groq_error(exc):
                 raise
             time.sleep(wait)
     raise last_error
@@ -86,11 +92,11 @@ def get_llm():
     """Return the advisory chat model. Raises RuntimeError if the key is missing."""
     global _llm
     if _llm is None:
-        _llm = ChatGoogleGenerativeAI(
-            model=GEMINI_MODEL_ADVISORY,
-            google_api_key=gemini_api_key(),
+        _llm = ChatGroq(
+            model=GROQ_MODEL_ADVISORY,
+            groq_api_key=groq_api_key(),
             temperature=0.1,
-            max_output_tokens=2048,
+            max_tokens=2048,
         )
     return _llm
 
@@ -630,7 +636,7 @@ def ask_tax_copilot(query: str, top_k: int = 7) -> dict:
         }
     """
     print(f"\n[Query] {query}")
-    print(f"[Engine] LangChain RAG chain | model={GEMINI_MODEL_ADVISORY} | top_k={top_k}")
+    print(f"[Engine] LangChain RAG chain | model={GROQ_MODEL_ADVISORY} | top_k={top_k}")
 
     # Build the chain
     chain = _build_rag_chain(top_k)

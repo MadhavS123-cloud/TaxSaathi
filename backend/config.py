@@ -21,6 +21,10 @@ load_dotenv(REPO_ROOT / ".env", override=False)
 _DEFAULT_EXTRACT_MODEL = "gemini-3.8-flash"
 _DEFAULT_ADVISORY_MODEL = "gemini-3.8-flash"
 
+# Groq models
+_DEFAULT_GROQ_ADVISORY_MODEL = "llama-3.3-70b-versatile"
+_DEFAULT_GROQ_EXTRACT_MODEL = "llama-3.2-11b-vision-preview"
+
 
 def _env_or_default(name: str, default: str) -> str:
     value = os.getenv(name, "").strip()
@@ -29,6 +33,8 @@ def _env_or_default(name: str, default: str) -> str:
 
 GEMINI_MODEL_EXTRACT = _env_or_default("GEMINI_MODEL_EXTRACT", _DEFAULT_EXTRACT_MODEL)
 GEMINI_MODEL_ADVISORY = _env_or_default("GEMINI_MODEL_ADVISORY", _DEFAULT_ADVISORY_MODEL)
+GROQ_MODEL_ADVISORY = _env_or_default("GROQ_MODEL_ADVISORY", _env_or_default("GROQ_MODEL", _DEFAULT_GROQ_ADVISORY_MODEL))
+GROQ_MODEL_EXTRACT = _env_or_default("GROQ_MODEL_EXTRACT", _DEFAULT_GROQ_EXTRACT_MODEL)
 
 # One-to-many partial payments may land later than a one-to-one fuzzy match.
 PARTIAL_WINDOW_DAYS = 30
@@ -51,6 +57,24 @@ CHROMA_PATH = _resolve_chroma_path()
 def chroma_persist_dir() -> Path:
     """Absolute Chroma directory. Same value as CHROMA_PATH."""
     return CHROMA_PATH
+
+
+def groq_api_key() -> str:
+    """Return the Groq key, or raise a clear error if it is missing."""
+    key = os.getenv("GROQ_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError(
+            "GROQ_API_KEY is not set. Add it to backend/.env or Render environment variables."
+        )
+    return key
+
+
+def groq_advisory_model() -> str:
+    return GROQ_MODEL_ADVISORY
+
+
+def groq_extract_model() -> str:
+    return GROQ_MODEL_EXTRACT
 
 
 def gemini_api_key() -> str:

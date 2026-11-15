@@ -7,6 +7,10 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL_ADVISORY
+        value: llama-3.3-70b-versatile
       - key: GEMINI_API_KEY
         sync: false
       - key: FRONTEND_URL

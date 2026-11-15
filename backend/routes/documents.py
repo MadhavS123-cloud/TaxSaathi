@@ -168,11 +168,13 @@ async def upload_document(
     db.commit()
     db.refresh(doc)
 
-    # 7. Run Gemini OCR (synchronous — returns in same request)
-    gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
-    if not gemini_key:
+    # 7. Run OCR (synchronous — returns in same request)
+    has_api_key = bool(
+        os.getenv("GROQ_API_KEY", "").strip() or os.getenv("GEMINI_API_KEY", "").strip()
+    )
+    if not has_api_key:
         doc.status = "failed"
-        doc.error_detail = "Gemini key missing — set GEMINI_API_KEY in .env"
+        doc.error_detail = "LLM API key missing — set GROQ_API_KEY in Render / .env"
     else:
         try:
             from extract_invoice import extract_real_invoice
@@ -193,8 +195,8 @@ async def upload_document(
         except Exception as e:
             err_str = str(e)
             doc.status = "failed"
-            if "API_KEY" in err_str or "API key" in err_str:
-                doc.error_detail = "Invalid or expired Gemini API key."
+            if "API_KEY" in err_str or "API key" in err_str or "401" in err_str:
+                doc.error_detail = "Invalid or expired LLM API key."
             else:
                 doc.error_detail = err_str[:300]
 

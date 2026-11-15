@@ -107,6 +107,7 @@ def health():
     except Exception:
         pass
 
+    groq_key = bool(os.getenv("GROQ_API_KEY", "").strip())
     gemini_key = bool(os.getenv("GEMINI_API_KEY", "").strip())
 
     chroma_loaded = False
@@ -119,6 +120,7 @@ def health():
     return {
         "status": "ok" if db_ok else "error",
         "db": db_ok,
+        "groq_key_present": groq_key,
         "gemini_key_present": gemini_key,
         "chroma_loaded": chroma_loaded,
     }
