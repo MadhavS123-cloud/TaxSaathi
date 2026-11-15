@@ -22,7 +22,7 @@ _DEFAULT_EXTRACT_MODEL = "gemini-3.8-flash"
 _DEFAULT_ADVISORY_MODEL = "gemini-3.8-flash"
 
 # Groq models
-_DEFAULT_GROQ_ADVISORY_MODEL = "llama-3.3-70b-versatile"
+_DEFAULT_GROQ_ADVISORY_MODEL = "llama-3.1-8b-instant"
 _DEFAULT_GROQ_EXTRACT_MODEL = "llama-3.2-11b-vision-preview"
 
 
