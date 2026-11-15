@@ -10,7 +10,7 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_MODEL_ADVISORY
-        value: llama-3.1-8b-instant
+        value: openai/gpt-oss-20b
       - key: GEMINI_API_KEY
         sync: false
       - key: FRONTEND_URL
