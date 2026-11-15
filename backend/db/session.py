@@ -16,6 +16,8 @@ _this_dir = os.path.dirname(os.path.abspath(__file__))
 _backend_dir = os.path.dirname(_this_dir)       # backend/
 _root_dir = os.path.dirname(_backend_dir)        # repo root
 
+load_dotenv(os.path.join(_backend_dir, ".env.development"), override=False)
+load_dotenv(os.path.join(_backend_dir, "env.development"), override=False)
 load_dotenv(os.path.join(_backend_dir, ".env"), override=False)
 load_dotenv(os.path.join(_root_dir, ".env"), override=False)
 
