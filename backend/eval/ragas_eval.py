@@ -90,7 +90,7 @@ def score_in_corpus(samples: list[dict]) -> dict:
     so a metric is not asked to score an empty context.
     """
     _prepare_ragas_import()
-    from config import GEMINI_MODEL_ADVISORY, gemini_api_key
+    from config import GROQ_MODEL_ADVISORY, GEMINI_MODEL_ADVISORY, gemini_api_key
     from ragas import EvaluationDataset, evaluate
     from ragas.run_config import RunConfig
 
@@ -119,15 +119,26 @@ def score_in_corpus(samples: list[dict]) -> dict:
     if not scored:
         return {"metrics": {}, "skipped": skipped, "count": 0}
 
-    key = gemini_api_key()
-    # Sync Gemini calls in a worker thread. ragas drives an async loop that
-    # nest_asyncio has patched, and the async Gemini client does not finish there.
-    judge = LangchainLLMWrapper(ThreadedChat(
-        model=GEMINI_MODEL_ADVISORY,
-        google_api_key=key,
-        temperature=0,
-        timeout=45,
-    ))
+    groq_key = os.getenv("GROQ_API_KEY", "").strip()
+    if groq_key:
+        from langchain_groq import ChatGroq
+        judge = LangchainLLMWrapper(ChatGroq(
+            model=GROQ_MODEL_ADVISORY,
+            groq_api_key=groq_key,
+            temperature=0,
+            timeout=45,
+        ))
+    else:
+        key = gemini_api_key()
+        # Sync Gemini calls in a worker thread. ragas drives an async loop that
+        # nest_asyncio has patched, and the async Gemini client does not finish there.
+        judge = LangchainLLMWrapper(ThreadedChat(
+            model=GEMINI_MODEL_ADVISORY,
+            google_api_key=key,
+            temperature=0,
+            timeout=45,
+        ))
+    key = os.getenv("GEMINI_API_KEY", "").strip()
     embeddings = LangchainEmbeddingsWrapper(ThreadedEmbeddings(
         model="models/gemini-embedding-001",
         google_api_key=key,
