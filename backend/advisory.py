@@ -72,9 +72,22 @@ def _retryable_groq_error(exc):
 # Backward compatibility alias
 _retryable_gemini_error = _retryable_groq_error
 
+FALLBACK_GROQ_MODELS = (
+    "llama-3.1-8b-instant",
+    "llama3-8b-8192",
+    "mixtral-8x7b-32768",
+    "gemma2-9b-it",
+)
 
-def _invoke_with_backoff(chain, payload):
-    """Invoke the advisory chain up to 3 times. On 429/503, wait 1s, then 2s, then 4s before giving up."""
+
+def _is_model_not_found(exc) -> bool:
+    err = str(exc).lower()
+    return "404" in err and ("model" in err or "access" in err or "not found" in err)
+
+
+def _invoke_with_backoff(chain, payload, *args, **kwargs):
+    """Invoke the advisory chain with retries on 429/503, and automatic fallback on 404 model_not_found."""
+    top_k = kwargs.get("top_k", 7)
     waits = (1, 2, 4)
     last_error = None
     for wait in waits:
@@ -82,6 +95,28 @@ def _invoke_with_backoff(chain, payload):
             return chain.invoke(payload)
         except Exception as exc:
             last_error = exc
+            if _is_model_not_found(exc):
+                for fallback in FALLBACK_GROQ_MODELS:
+                    if fallback == GROQ_MODEL_ADVISORY:
+                        continue
+                    try:
+                        logger.warning("Configured Groq model unavailable (%s). Falling back to '%s'...", exc, fallback)
+                        print(f"[Engine] Model unavailable; falling back to Groq model={fallback}")
+                        fallback_llm = ChatGroq(
+                            model=fallback,
+                            groq_api_key=groq_api_key(),
+                            temperature=0.1,
+                            max_tokens=2048,
+                        )
+                        fallback_chain = _build_rag_chain(top_k, llm=fallback_llm)
+                        return fallback_chain.invoke(payload)
+                    except Exception as fallback_exc:
+                        last_error = fallback_exc
+                        if not _is_model_not_found(fallback_exc):
+                            break
+                        continue
+                raise last_error
+
             if not _retryable_groq_error(exc):
                 raise
             time.sleep(wait)
@@ -583,7 +618,7 @@ def parse_advisory_output(raw_text: str, fallback_citations: list) -> dict:
 # ---------------------------------------------------------------------------
 # 6.  LangChain RAG Chain builder
 # ---------------------------------------------------------------------------
-def _build_rag_chain(top_k: int):
+def _build_rag_chain(top_k: int, llm=None):
     """
     Builds a LangChain LCEL chain with hybrid retrieval:
 
@@ -597,6 +632,7 @@ def _build_rag_chain(top_k: int):
                                               ↓
                                     StrOutputParser   →  plain str
     """
+    active_llm = llm if llm is not None else get_llm()
     chain = (
         RunnablePassthrough.assign(
             context=RunnableLambda(
@@ -604,7 +640,7 @@ def _build_rag_chain(top_k: int):
             )
         )
         | advisory_prompt
-        | get_llm()
+        | active_llm
         | _str_parser
     )
     return chain
