@@ -14,6 +14,8 @@ from dotenv import load_dotenv
 BACKEND_DIR = Path(__file__).resolve().parent
 REPO_ROOT = BACKEND_DIR.parent
 
+load_dotenv(BACKEND_DIR / ".env.development", override=False)
+load_dotenv(BACKEND_DIR / "env.development", override=False)
 load_dotenv(BACKEND_DIR / ".env", override=False)
 load_dotenv(REPO_ROOT / ".env", override=False)
 

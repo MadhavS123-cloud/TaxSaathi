@@ -41,15 +41,8 @@ def get_url() -> str:
     Falls back to the SQLite path used in development/testing so that
     `alembic upgrade head` works locally without a PostgreSQL connection.
     """
-    url = os.getenv("DATABASE_URL", "")
-    if not url:
-        return "sqlite:///./taxsaathi_fallback.db"
-    # Ensure psycopg2 dialect for Postgres.
-    if url.startswith("postgresql://"):
-        url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
-    if url.startswith("postgresql") and "sslmode=" not in url:
-        url += "?sslmode=require"
-    return url
+    from db.session import build_database_url
+    return build_database_url()
 
 
 def run_migrations_offline() -> None:

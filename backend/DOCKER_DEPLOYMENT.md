@@ -89,8 +89,8 @@ services:
 
 Set these in Render Dashboard:
 
-1. **DATABASE_URL**: Your Supabase PostgreSQL connection string
-2. **GEMINI_API_KEY**: Your Google Gemini API key
+1. **DATABASE_URL**: Your Neon PostgreSQL connection string (falls back to SQLite if omitted)
+2. **GROQ_API_KEY**: Your Groq API key
 3. **FRONTEND_URL** (optional): Your frontend deployment URL
 
 ### Deploy
@@ -125,7 +125,7 @@ Set these in Render Dashboard:
 ### Database Connection Fails
 
 - Check `DATABASE_URL` in `.env`
-- Ensure Supabase allows connections from your IP
+- Ensure Neon allows connections from your IP (or has 0.0.0.0/0 allowed)
 - Test connection:
   ```bash
   docker exec taxsaathi-backend python -c "from db.session import SessionLocal; db = SessionLocal(); db.execute('SELECT 1'); print('✅ Connected')"
