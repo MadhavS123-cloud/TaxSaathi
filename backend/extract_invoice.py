@@ -232,6 +232,7 @@ def _extract_with_groq(file_path: str) -> dict:
                 messages=[{"role": "user", "content": content}],
                 response_format={"type": "json_object"},
                 temperature=0.1,
+                reasoning_effort="none",
             )
             break
         except Exception as exc:

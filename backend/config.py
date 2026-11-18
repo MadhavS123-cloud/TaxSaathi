@@ -23,9 +23,15 @@ load_dotenv(REPO_ROOT / ".env", override=False)
 _DEFAULT_EXTRACT_MODEL = "gemini-3.8-flash"
 _DEFAULT_ADVISORY_MODEL = "gemini-3.8-flash"
 
-# Groq models
+# Groq models. llama-3.2-11b-vision-preview was shut down and returns 400.
 _DEFAULT_GROQ_ADVISORY_MODEL = "openai/gpt-oss-20b"
-_DEFAULT_GROQ_EXTRACT_MODEL = "llama-3.2-11b-vision-preview"
+_DEFAULT_GROQ_EXTRACT_MODEL = "qwen/qwen3.8-27b"
+_RETIRED_GROQ_EXTRACT_MODELS = frozenset({
+    "llama-3.2-11b-vision-preview",
+    "llama-3.2-90b-vision-preview",
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "meta-llama/llama-4-maverick-17b-128e-instruct",
+})
 
 
 def _env_or_default(name: str, default: str) -> str:
@@ -33,10 +39,18 @@ def _env_or_default(name: str, default: str) -> str:
     return value or default
 
 
+def resolve_groq_extract_model(value: str) -> str:
+    """Use the current vision model when the env still names a retired one."""
+    chosen = (value or "").strip()
+    if not chosen or chosen in _RETIRED_GROQ_EXTRACT_MODELS:
+        return _DEFAULT_GROQ_EXTRACT_MODEL
+    return chosen
+
+
 GEMINI_MODEL_EXTRACT = _env_or_default("GEMINI_MODEL_EXTRACT", _DEFAULT_EXTRACT_MODEL)
 GEMINI_MODEL_ADVISORY = _env_or_default("GEMINI_MODEL_ADVISORY", _DEFAULT_ADVISORY_MODEL)
 GROQ_MODEL_ADVISORY = _env_or_default("GROQ_MODEL_ADVISORY", _env_or_default("GROQ_MODEL", _DEFAULT_GROQ_ADVISORY_MODEL))
-GROQ_MODEL_EXTRACT = _env_or_default("GROQ_MODEL_EXTRACT", _DEFAULT_GROQ_EXTRACT_MODEL)
+GROQ_MODEL_EXTRACT = resolve_groq_extract_model(os.getenv("GROQ_MODEL_EXTRACT", ""))
 
 # One-to-many partial payments may land later than a one-to-one fuzzy match.
 PARTIAL_WINDOW_DAYS = 30
