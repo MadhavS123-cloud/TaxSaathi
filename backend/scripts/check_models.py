@@ -15,7 +15,6 @@ GROQ_PROBE_IDS = (
     "openai/gpt-oss-20b",
     "openai/gpt-oss-120b",
     "qwen/qwen3.8-27b",
-    "llama-3.2-11b-vision-preview",
 )
 
 GEMINI_PROBE_IDS = (
