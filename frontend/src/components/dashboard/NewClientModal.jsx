@@ -7,23 +7,32 @@ export default function NewClientModal({ isOpen, onClose, onCreateClient }) {
   const [legalName, setLegalName] = useState('');
   const [gstin, setGstin] = useState('');
   const [pan, setPan] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!legalName.trim()) return;
+    if (!legalName.trim() || saving) return;
 
-    onCreateClient({
-      legal_name: legalName.trim(),
-      gstin: gstin.trim() ? gstin.trim().toUpperCase() : null,
-      pan: pan.trim() ? pan.trim().toUpperCase() : null,
-    });
-
-    setLegalName('');
-    setGstin('');
-    setPan('');
-    onClose();
+    setSaving(true);
+    setError('');
+    try {
+      await onCreateClient({
+        legal_name: legalName.trim(),
+        gstin: gstin.trim() ? gstin.trim().toUpperCase() : null,
+        pan: pan.trim() ? pan.trim().toUpperCase() : null,
+      });
+      setLegalName('');
+      setGstin('');
+      setPan('');
+      onClose();
+    } catch (err) {
+      setError(err.message || 'The client was not saved.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -89,12 +98,14 @@ export default function NewClientModal({ isOpen, onClose, onCreateClient }) {
             />
           </div>
 
+          {error && <p className="text-sm text-rust">{error}</p>}
+
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-hairline">
-            <SecondaryButton onClick={onClose} type="button">
+            <SecondaryButton onClick={onClose} type="button" disabled={saving}>
               Cancel
             </SecondaryButton>
-            <PrimaryButton type="submit">
-              + Save Client
+            <PrimaryButton type="submit" disabled={saving}>
+              {saving ? 'Saving…' : '+ Save Client'}
             </PrimaryButton>
           </div>
         </form>

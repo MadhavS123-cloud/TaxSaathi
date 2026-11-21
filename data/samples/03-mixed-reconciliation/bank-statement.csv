@@ -1,0 +1,6 @@
+date,amount,reference,party,narration
+03-02-2026,25000.00,INV-EX-1001,Sharma Traders,Full payment
+07-02-2026,7000.00,INV-PA-1002,Sharma Traders,Part payment
+09-02-2026,4000.00,INV-PA-1002,Sharma Traders,Part payment
+11-02-2026,8000.00,INV-OV-1003,Sharma Traders,Payment above invoice
+12-02-2026,7000.00,INV-OV-1003,Sharma Traders,Second payment above invoice

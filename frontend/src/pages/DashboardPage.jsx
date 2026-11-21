@@ -72,12 +72,8 @@ export default function DashboardPage() {
   };
 
   const handleCreateClient = async (newClientData) => {
-    try {
-      await api.clients.create(newClientData);
-      await fetchDashboardData();
-    } catch (e) {
-      console.error("Failed to create client:", e);
-    }
+    await api.clients.create(newClientData);
+    navigate('/app/cases?tab=clients');
   };
 
   const handleClearAll = async () => {

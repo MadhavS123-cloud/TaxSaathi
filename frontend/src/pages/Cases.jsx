@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Building2, FolderKanban, Plus, UserPlus, FileText, ArrowRight } from 'lucide-react';
 import PrimaryButton from '../components/ui/PrimaryButton';
 import SecondaryButton from '../components/ui/SecondaryButton';
@@ -10,9 +10,10 @@ import { api } from '../lib/api';
 
 export default function Cases() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [clients, setClients] = useState([]);
   const [cases, setCases] = useState([]);
-  const [activeTab, setActiveTab] = useState('cases'); // 'cases' | 'clients'
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'clients' ? 'clients' : 'cases');
   const [isCaseModalOpen, setIsCaseModalOpen] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -46,12 +47,9 @@ export default function Cases() {
   };
 
   const handleCreateClient = async (newClientData) => {
-    try {
-      await api.clients.create(newClientData);
-      await loadData();
-    } catch (e) {
-      console.error("Failed to create client:", e);
-    }
+    await api.clients.create(newClientData);
+    await loadData();
+    setActiveTab('clients');
   };
 
   return (
