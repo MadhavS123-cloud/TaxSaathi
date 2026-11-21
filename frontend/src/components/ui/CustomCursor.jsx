@@ -5,7 +5,8 @@ const GOLD = '#C9A96E';
 const CREAM = '#F3EDE2';
 
 export default function CustomCursor() {
-  const onLanding = useLocation().pathname === '/';
+  const path = useLocation().pathname;
+  const onLanding = path === '/' || path === '/login';
   const [isActive, setIsActive] = useState(false);
   const [variant, setVariant] = useState('default');
   const [isClicking, setIsClicking] = useState(false);
@@ -102,6 +103,13 @@ export default function CustomCursor() {
   if (!isActive || !hasMoved) return null;
 
   if (onLanding) {
+    if (variant === 'text') {
+      return (
+        <div ref={innerRef} className="pointer-events-none fixed left-0 top-0 z-[9999]" aria-hidden="true">
+          <span className="block h-5 w-px" style={{ background: CREAM }} />
+        </div>
+      );
+    }
     const hovering = variant === 'interactive';
     const ringState = isClicking ? 'press' : hovering ? 'hot' : 'idle';
     const armScale = isClicking ? 1.12 : hovering ? 0.72 : 1;
