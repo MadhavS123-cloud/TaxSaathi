@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 
 const ITEM_TYPES = {
   failed_extraction: { label: 'Failed Extraction', icon: FileText, color: 'text-rust' },
-  unmatched_reconciliation: { label: 'Unmatched Row', icon: AlertCircle, color: 'text-amber-600' },
+  unmatched_reconciliation: { label: 'Unmatched Row', icon: AlertCircle, color: 'text-brass' },
   draft_email: { label: 'Draft Email', icon: Mail, color: 'text-brass' },
 };
 

@@ -30,6 +30,7 @@ export default function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [clearError, setClearError] = useState('');
 
   const fetchDashboardData = async () => {
     try {
@@ -77,13 +78,14 @@ export default function DashboardPage() {
   };
 
   const handleClearAll = async () => {
+    setClearError('');
     try {
       await api.cases.deleteAll();
       setCases([]);
       setActivities([]);
       await fetchDashboardData();
     } catch (e) {
-      console.error("Failed to clear cases:", e);
+      setClearError(e.message || 'Could not clear the cases.');
     }
   };
 
@@ -185,6 +187,7 @@ export default function DashboardPage() {
           <p className="text-ink-muted font-sans text-sm">
             Overview of all active audit assignments, ledger reconciliations, and compliance tracking.
           </p>
+          {clearError && <p className="mt-2 text-sm font-sans text-rust">{clearError}</p>}
         </div>
         <div className="flex items-center gap-3">
           {cases.length > 0 && (

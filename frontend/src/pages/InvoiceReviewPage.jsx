@@ -70,6 +70,7 @@ export default function InvoiceReviewPage() {
   const [loading, setLoading] = useState(!extracted);
   const [loadError, setLoadError] = useState(null);
   const [sampleName, setSampleName] = useState(location.state?.filename || '');
+  const [previewUrl, setPreviewUrl] = useState(fileUrl || '');
   const [fields, setFields] = useState(() => fieldsFromExtracted(extracted));
   const [lineItems, setLineItems] = useState(() => linesFromExtracted(extracted));
 
@@ -109,6 +110,32 @@ export default function InvoiceReviewPage() {
       cancelled = true;
     };
   }, [caseId, invoiceId, extracted]);
+
+  useEffect(() => {
+    if (fileUrl) {
+      setPreviewUrl(fileUrl);
+      return undefined;
+    }
+    if (!caseId || !invoiceId) return undefined;
+    let cancelled = false;
+    let objectUrl = '';
+    api.documents.file(caseId, invoiceId)
+      .then((url) => {
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        objectUrl = url;
+        setPreviewUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setPreviewUrl('');
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [caseId, invoiceId, fileUrl]);
 
   const handleSaveEdits = async () => {
     setIsSaving(true);
@@ -223,7 +250,7 @@ export default function InvoiceReviewPage() {
           <DocumentPreview
             activeField={activeField}
             onClearHighlight={() => setActiveField(null)}
-            imageUrl={fileUrl}
+            imageUrl={previewUrl}
             filename={sampleName}
           />
         </div>

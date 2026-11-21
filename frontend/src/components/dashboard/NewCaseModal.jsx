@@ -44,7 +44,7 @@ export default function NewCaseModal({ isOpen, onClose, onCreateCase }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-xs p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
       <div className="bg-paper-raised border border-hairline w-full max-w-lg shadow-2xl rounded-[4px] overflow-hidden">
 
         {/* Modal Header */}

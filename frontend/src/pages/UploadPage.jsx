@@ -46,11 +46,11 @@ export default function UploadPage() {
   if (!caseId) {
     return (
       <div className="max-w-[1000px] mx-auto flex flex-col gap-8 pb-12">
-        <div className="bg-amber-50 border border-amber-200 rounded-[2px] p-6 flex items-center gap-4">
-          <AlertCircle size={20} className="text-amber-600 shrink-0" />
+        <div className="flex items-center gap-4 border border-brass/40 bg-paper-raised p-6">
+          <AlertCircle size={20} className="shrink-0 text-brass" />
           <div>
-            <p className="font-sans font-medium text-amber-800">No case selected</p>
-            <p className="text-sm text-amber-700 mt-1">
+            <p className="font-sans font-medium text-ink">No case selected</p>
+            <p className="mt-1 text-sm text-ink-muted">
               Please open a case from the{' '}
               <button onClick={() => navigate('/app/dashboard')} className="underline">dashboard</button>
               {' '}before uploading documents.
@@ -173,7 +173,7 @@ export default function UploadPage() {
             <Eye size={16} strokeWidth={1.5} />
           </button>
           <button
-            className="text-xs font-sans font-medium text-paper bg-ink hover:text-brass px-3 py-1.5 rounded-[2px] transition-colors disabled:opacity-50"
+            className="rounded-[2px] border border-brass bg-brass px-3 py-1.5 text-xs font-sans font-medium text-[#0C0C0C] transition-colors disabled:opacity-50"
             disabled={row.status !== 'matched'}
             onClick={() =>
               navigate(`/app/cases/${caseId}/invoices/${row.dbId || row.id}/review`, {

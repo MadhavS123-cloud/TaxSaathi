@@ -7,7 +7,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from db.session import get_db
-from db.models import Case, Client, Activity, User, Document, Reconciliation
+from db.models import Activity, Case, ChatMessage, Client, Document, Reconciliation, ReviewItem, User
+from reconciliation.counts import counts_from_summary
 from dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/cases", tags=["Cases"])
@@ -62,9 +63,7 @@ def _case_to_response(c: Case, db: Session) -> dict:
     )
     if latest_recon and latest_recon.result_json:
         sum_data = latest_recon.result_json.get("summary", {})
-        matched_count = sum_data.get("matched_count", 0)
-        exception_count = sum_data.get("unmatched_count", 0)
-        pending_count = sum_data.get("timing_count", 0)
+        matched_count, exception_count, pending_count = counts_from_summary(sum_data)
     else:
         # Also include document processing counts
         docs = db.query(Document).filter(Document.case_id == c.id).all()
@@ -224,6 +223,8 @@ def clear_all_cases(
 
     case_ids = [c.id for c in cases]
     if case_ids:
+        db.query(ReviewItem).filter(ReviewItem.case_id.in_(case_ids)).delete(synchronize_session=False)
+        db.query(ChatMessage).filter(ChatMessage.case_id.in_(case_ids)).delete(synchronize_session=False)
         db.query(Activity).filter(Activity.case_id.in_(case_ids)).delete(synchronize_session=False)
         db.query(Document).filter(Document.case_id.in_(case_ids)).delete(synchronize_session=False)
         db.query(Reconciliation).filter(Reconciliation.case_id.in_(case_ids)).delete(synchronize_session=False)

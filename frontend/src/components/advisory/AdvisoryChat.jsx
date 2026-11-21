@@ -249,7 +249,7 @@ const AdvisoryChat = ({ initialCaseId = null }) => {
           <button
             type="submit"
             disabled={isLoading || !inputValue.trim()}
-            className="bg-ink text-paper px-5 py-2 font-mono text-xs uppercase tracking-wider disabled:opacity-50 hover:bg-brass transition-colors rounded-[2px]"
+            className="rounded-[2px] border border-brass bg-brass px-5 py-2 font-mono text-xs uppercase tracking-wider text-[#0C0C0C] transition-colors disabled:opacity-50"
           >
             {isLoading ? 'Querying…' : 'Ask'}
           </button>

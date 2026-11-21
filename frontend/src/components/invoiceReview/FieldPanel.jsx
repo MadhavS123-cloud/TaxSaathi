@@ -155,7 +155,7 @@ export default function FieldPanel({ fields, setFields, items, setItems, activeF
             <span className="text-[10px] uppercase font-sans text-ink-muted tracking-widest">Auto-recalculate</span>
             <button 
               onClick={() => setAutoRecalculate(!autoRecalculate)}
-              className="relative w-8 h-4 rounded-full transition-colors flex items-center px-0.5 bg-ink"
+              className="relative flex h-4 w-8 items-center rounded-full border border-brass bg-paper-raised px-0.5 transition-colors"
             >
               <div className={`w-3 h-3 rounded-full bg-brass transition-transform ${autoRecalculate ? 'translate-x-4' : 'translate-x-0'}`} />
             </button>

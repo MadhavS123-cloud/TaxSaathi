@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   UploadCloud,
@@ -23,7 +23,18 @@ const NAV_ITEMS = [
   { path: '/app/audit', label: 'Audit Trail', icon: History },
 ];
 
+function navIsActive(path, pathname) {
+  if (path === '/app/extract') {
+    return pathname === '/app/extract' || pathname.includes('/upload');
+  }
+  if (path === '/app/cases') {
+    return pathname === '/app/cases' || pathname.includes('/invoices/');
+  }
+  return pathname === path;
+}
+
 export default function Sidebar() {
+  const { pathname } = useLocation();
   const user = getUser();
   const displayName = user?.name || 'Signed in';
   const displayEmail = user?.email || '';
@@ -52,13 +63,11 @@ export default function Sidebar() {
             key={item.path}
             to={item.path}
             data-cursor="interactive"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-6 py-2.5 text-sm font-sans transition-all border-l-2 ${
-                isActive
-                  ? 'border-brass text-ink bg-[rgba(169,129,46,0.06)]'
-                  : 'border-transparent text-ink-muted hover:text-ink hover:bg-paper'
-              }`
-            }
+            className={`flex items-center gap-3 px-6 py-2.5 text-sm font-sans transition-all border-l-2 ${
+              navIsActive(item.path, pathname)
+                ? 'border-brass text-ink bg-[rgba(201,169,110,0.08)]'
+                : 'border-transparent text-ink-muted hover:text-ink hover:bg-paper-raised'
+            }`}
           >
             <item.icon size={18} strokeWidth={1.5} />
             {item.label}

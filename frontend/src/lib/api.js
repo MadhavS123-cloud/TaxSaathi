@@ -111,7 +111,8 @@ async function request(method, path, body = null, isFormData = false) {
     throw new Error(`Cannot reach backend at ${API_BASE}. Is the backend running?`);
   }
 
-  if (response.status === 401) {
+  const signingIn = path === '/auth/login' || path === '/auth/register';
+  if (response.status === 401 && !signingIn) {
     handleUnauthorized();
     throw new Error('Session expired, please sign in again.');
   }
@@ -178,6 +179,20 @@ export const api = {
       return request('POST', `/cases/${caseId}/documents`, fd, true);
     },
     list: (caseId) => request('GET', `/cases/${caseId}/documents`),
+    file: async (caseId, docId) => {
+      const response = await fetch(`${API_BASE}/cases/${caseId}/documents/${docId}/file`, {
+        headers: authHeaders(true),
+      });
+      if (response.status === 401) {
+        handleUnauthorized();
+        throw new Error('Session expired, please sign in again.');
+      }
+      if (!response.ok) {
+        throw new Error('Source file is not available.');
+      }
+      const blob = await response.blob();
+      return URL.createObjectURL(blob);
+    },
     update: (caseId, docId, extractedJson) =>
       request('PUT', `/cases/${caseId}/documents/${docId}`, { extracted_json: extractedJson }),
   },

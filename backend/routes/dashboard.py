@@ -8,6 +8,7 @@ from typing import Optional
 from db.session import get_db
 from db.models import Case, Document, Reconciliation, User
 from dependencies.auth import get_current_user
+from reconciliation.counts import counts_from_summary
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
@@ -40,7 +41,8 @@ def get_dashboard_summary(
             else:
                 docs_processing += 1
 
-    # Aggregate reconciliation metrics if available
+    # Ledger matches come from the reconciliation report. An extracted
+    # document is not a matched bank line.
     recon_matched = 0
     recon_exceptions = 0
     recon_timing = 0
@@ -48,12 +50,12 @@ def get_dashboard_summary(
         reconciliations = db.query(Reconciliation).filter(Reconciliation.case_id.in_(case_ids)).all()
         for r in reconciliations:
             if r.result_json and isinstance(r.result_json, dict):
-                summary = r.result_json.get("summary", {})
-                recon_matched += summary.get("matched_count", 0)
-                recon_exceptions += summary.get("unmatched_count", 0)
-                recon_timing += summary.get("timing_count", 0)
+                matched, unmatched, timing = counts_from_summary(r.result_json.get("summary"))
+                recon_matched += matched
+                recon_exceptions += unmatched
+                recon_timing += timing
 
-    total_matched = docs_extracted + recon_matched
+    total_matched = recon_matched
     total_unmatched = docs_failed + recon_exceptions
     total_timing = docs_processing + recon_timing
 

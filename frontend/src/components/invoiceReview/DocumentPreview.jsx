@@ -46,7 +46,7 @@ export default function DocumentPreview({ activeField, onClearHighlight, imageUr
           <div className="w-full max-w-[800px] border border-dashed border-hairline bg-paper-raised p-10 text-center">
             <p className="font-serif text-lg text-ink">No source file on this review</p>
             <p className="mt-2 text-sm font-sans text-ink-muted">
-              The extracted fields are on the right. Open the document from the upload queue to attach the scan.
+              The extracted fields are still on the right.
             </p>
           </div>
         )}

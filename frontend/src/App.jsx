@@ -14,6 +14,7 @@ import Advisory from './pages/Advisory';
 import Drafts from './pages/Drafts';
 import AuditLog from './pages/AuditLog';
 import ReviewApprove from './pages/ReviewApprove';
+import NotFoundPage, { DeskNotFound } from './pages/NotFoundPage';
 
 /**
  * ProtectedRoute — guards all /app/* routes.
@@ -57,7 +58,9 @@ function App() {
           <Route path="drafts" element={<Drafts />} />
           <Route path="approve" element={<ReviewApprove />} />
           <Route path="audit" element={<AuditLog />} />
+          <Route path="*" element={<DeskNotFound />} />
         </Route>
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );

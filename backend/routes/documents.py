@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -227,6 +228,54 @@ async def upload_document(
         "error_detail": doc.error_detail,
         "created_at": doc.created_at.strftime("%Y-%m-%d %H:%M:%S") if doc.created_at else "",
     }
+
+
+_MEDIA_TYPES = {
+    ".pdf": "application/pdf",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+}
+
+
+def _case_for_user(db: Session, case_id: str, current_user: User) -> Case:
+    case = db.query(Case).filter(Case.id == case_id).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found.")
+    firm_id = current_user.firm_id
+    if firm_id and case.firm_id and case.firm_id != firm_id:
+        raise HTTPException(status_code=403, detail="Access denied.")
+    if not firm_id and case.owner != current_user.email:
+        raise HTTPException(status_code=403, detail="Access denied.")
+    return case
+
+
+@router.get("/cases/{case_id}/documents/{doc_id}/file")
+def download_document(
+    case_id: str,
+    doc_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return the stored invoice or receipt so review can show the scan."""
+    _case_for_user(db, case_id, current_user)
+    doc = db.query(Document).filter(Document.id == doc_id, Document.case_id == case_id).first()
+    if not doc or not doc.file_path:
+        raise HTTPException(status_code=404, detail="Source file is not available.")
+    real = os.path.realpath(doc.file_path)
+    root = os.path.realpath(UPLOAD_DIR)
+    try:
+        inside = os.path.commonpath([real, root]) == root
+    except ValueError:
+        inside = False
+    if not inside or not os.path.isfile(real):
+        raise HTTPException(status_code=404, detail="Source file is not available.")
+    ext = os.path.splitext(doc.filename or real)[1].lower()
+    return FileResponse(
+        real,
+        media_type=_MEDIA_TYPES.get(ext, "application/octet-stream"),
+        filename=doc.filename or os.path.basename(real),
+    )
 
 
 @router.put("/cases/{case_id}/documents/{doc_id}")
