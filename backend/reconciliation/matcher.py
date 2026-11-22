@@ -15,6 +15,8 @@ the two-pointer sweep is the most expensive step.
 
 from __future__ import annotations
 
+from bisect import bisect_left, bisect_right
+from datetime import timedelta
 from decimal import Decimal
 from difflib import SequenceMatcher
 from itertools import combinations
@@ -234,9 +236,12 @@ class Reconciler:
         review_notes: dict[str, str] = {}
         matches: list[MatchResult] = []
         ordered = sorted(invoices, key=lambda t: (t.txn_date, t.amount, t.id))
+        by_ref = self._payments_by_reference(payments)
+        dated = sorted(payments, key=lambda pay: (pay.txn_date, pay.id))
+        dated_days = [pay.txn_date for pay in dated]
 
         for inv in ordered:
-            group = self._reference_group(inv, payments, used)
+            group = self._reference_group(inv, by_ref, used)
             if len(group) < 2:
                 continue
             total = sum((p.amount for p in group), Decimal("0"))
@@ -260,7 +265,7 @@ class Reconciler:
         for inv in ordered:
             if inv.id in consumed_invoices or inv.id in review_notes:
                 continue
-            chosen = self._amount_subset(inv, payments, used)
+            chosen = self._amount_subset(inv, dated, dated_days, used)
             if not chosen:
                 continue
             total = sum((p.amount for p in chosen), Decimal("0"))
@@ -272,27 +277,39 @@ class Reconciler:
         remaining_payments = [pay for pay in payments if pay.id not in used]
         return matches, remaining_invoices, remaining_payments, review_notes
 
+    @staticmethod
+    def _payments_by_reference(payments: list[Transaction]) -> dict[str, list[Transaction]]:
+        grouped: dict[str, list[Transaction]] = {}
+        for pay in payments:
+            ref = pay.normalized_reference()
+            if ref:
+                grouped.setdefault(ref, []).append(pay)
+        for group in grouped.values():
+            group.sort(key=lambda pay: pay.id)
+        return grouped
+
     def _reference_group(
-        self, invoice: Transaction, payments: list[Transaction], used: set[str]
+        self, invoice: Transaction, by_ref: dict[str, list[Transaction]], used: set[str]
     ) -> list[Transaction]:
         ref = invoice.normalized_reference()
         if not ref:
             return []
-        group = [
-            pay for pay in payments
-            if pay.id not in used and pay.normalized_reference() == ref
-        ]
-        return sorted(group, key=lambda pay: pay.id)
+        return [pay for pay in by_ref.get(ref, ()) if pay.id not in used]
 
     def _amount_subset(
-        self, invoice: Transaction, payments: list[Transaction], used: set[str]
+        self,
+        invoice: Transaction,
+        dated: list[Transaction],
+        dated_days: list,
+        used: set[str],
     ) -> Optional[list[Transaction]]:
-        available = []
-        for pay in payments:
-            if pay.id in used:
-                continue
-            if abs((pay.txn_date - invoice.txn_date).days) <= self.partial_window_days:
-                available.append(pay)
+        if not dated:
+            return None
+        start = invoice.txn_date - timedelta(days=self.partial_window_days)
+        end = invoice.txn_date + timedelta(days=self.partial_window_days)
+        lo = bisect_left(dated_days, start)
+        hi = bisect_right(dated_days, end)
+        available = [pay for pay in dated[lo:hi] if pay.id not in used]
         available.sort(key=lambda pay: (abs((pay.txn_date - invoice.txn_date).days), pay.id))
         candidates = available[:_PARTIAL_CANDIDATE_CAP]
 
