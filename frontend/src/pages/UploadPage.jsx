@@ -173,7 +173,7 @@ export default function UploadPage() {
             <Eye size={16} strokeWidth={1.5} />
           </button>
           <button
-            className="rounded-[2px] border border-brass bg-brass px-3 py-1.5 text-xs font-sans font-medium text-[#0C0C0C] transition-colors disabled:opacity-50"
+            className="rounded-full bg-[#1C1915] px-3 py-1.5 text-xs font-sans font-medium text-[#F4F1EA] transition-colors disabled:opacity-50"
             disabled={row.status !== 'matched'}
             onClick={() =>
               navigate(`/app/cases/${caseId}/invoices/${row.dbId || row.id}/review`, {
@@ -192,7 +192,7 @@ export default function UploadPage() {
     <div className="max-w-[1000px] mx-auto flex flex-col gap-8 pb-12">
 
       {/* 1. Header Card */}
-      <div className="bg-paper-raised border border-hairline p-6 flex items-start justify-between">
+      <div className="flex items-start justify-between rounded-2xl border border-hairline bg-paper-raised p-6">
         <div className="flex gap-4">
           <div className="w-10 h-10 border border-hairline flex items-center justify-center bg-paper text-ink-muted shrink-0">
             <UploadCloud size={20} strokeWidth={1.5} />

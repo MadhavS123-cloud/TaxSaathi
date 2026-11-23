@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, AlertCircle, FileText, Mail, RefreshCw } from 'lucide-react';
 import { api } from '../lib/api';
+import DeskPageHeader from '../components/layout/DeskPageHeader';
 
 const ITEM_TYPES = {
   failed_extraction: { label: 'Failed Extraction', icon: FileText, color: 'text-rust' },
@@ -50,13 +51,11 @@ export default function ReviewApprove() {
 
   return (
     <div className="max-w-6xl mx-auto pb-12">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-3xl font-serif text-ink tracking-tight">Review &amp; Approve</h2>
-          <p className="text-ink-muted text-sm mt-1">
-            Items requiring practitioner sign-off: failed extractions, unmatched reconciliation rows, and drafted communications.
-          </p>
-        </div>
+      <DeskPageHeader
+        eyebrow="Your practice / Sign-off"
+        title="Review & Approve"
+        subtitle="Items waiting for a practitioner: failed extractions, unmatched rows, and drafted notes."
+      >
         <div className="flex items-center gap-3">
           <button
             onClick={loadItems}
@@ -72,7 +71,7 @@ export default function ReviewApprove() {
             {resolved.length} resolved
           </span>
         </div>
-      </div>
+      </DeskPageHeader>
 
       {loading && (
         <div className="bg-paper-raised border border-hairline p-8 text-center">

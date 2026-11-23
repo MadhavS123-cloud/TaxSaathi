@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import DataTable from '../components/ui/DataTable';
 import { api } from '../lib/api';
+import DeskPageHeader from '../components/layout/DeskPageHeader';
 
 const COLUMNS = [
   { header: 'Timestamp', accessor: 'timestamp', type: 'mono' },
@@ -41,13 +42,11 @@ export default function AuditLog() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-serif text-ink tracking-tight mb-2">Audit Log</h2>
-          <p className="text-ink-muted font-sans text-sm">
-            Recent actions stored for this firm. The list shows the latest activity records.
-          </p>
-        </div>
+      <DeskPageHeader
+        eyebrow="Your practice / History"
+        title="Audit Trail"
+        subtitle="Recent actions stored for this firm."
+      >
         <button
           type="button"
           onClick={load}
@@ -55,7 +54,7 @@ export default function AuditLog() {
         >
           Refresh
         </button>
-      </div>
+      </DeskPageHeader>
 
       {loading && (
         <div className="bg-paper-raised border border-hairline p-8 text-center">

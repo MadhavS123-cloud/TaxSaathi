@@ -197,7 +197,8 @@ export default function InvoiceReviewPage() {
             <FileCheck size={20} strokeWidth={1.5} />
           </div>
           <div>
-            <h2 className="text-xl font-serif text-ink tracking-tight">Extracted Invoice Data Review &amp; Verification</h2>
+            <p className="font-sans text-[11px] uppercase tracking-[0.18em] text-ink-muted">Your practice / Documents</p>
+            <h2 className="font-serif text-2xl tracking-tight text-ink">Invoice Data Review</h2>
             <p className="text-xs font-sans text-ink-muted">Compare the OCR extracted fields against the original voucher scan.</p>
           </div>
         </div>

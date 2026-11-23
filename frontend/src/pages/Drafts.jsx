@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import DeskPageHeader from '../components/layout/DeskPageHeader';
 
 export default function Drafts() {
   const [cases, setCases] = useState([]);
@@ -34,11 +35,11 @@ export default function Drafts() {
 
   return (
     <div className="max-w-6xl mx-auto pb-12">
-      <h2 className="text-3xl font-serif text-ink tracking-tight mb-2">Client Communication</h2>
-      <p className="text-ink-muted font-sans text-sm mb-6">
-        A plain-language note from the case&apos;s latest reconciliation and advisory reply.
-        It is queued for review and is not sent to the client.
-      </p>
+      <DeskPageHeader
+        eyebrow="Your practice / Clients"
+        title="Client Communication"
+        subtitle="A plain-language note from the case's latest reconciliation and advisory reply. It is queued for review and is not sent to the client."
+      />
 
       <form onSubmit={handleDraft} className="bg-paper-raised border border-hairline p-4 flex flex-wrap items-end gap-3 mb-6">
         <label className="flex flex-col gap-1 text-xs font-mono text-ink-muted uppercase tracking-wider">
@@ -63,7 +64,7 @@ export default function Drafts() {
         <button
           type="submit"
           disabled={!caseId || drafting}
-          className="bg-ink text-paper px-4 py-2 font-mono text-xs uppercase tracking-wider disabled:opacity-50 hover:bg-brass"
+          className="rounded-full bg-[#1C1915] px-4 py-2 font-sans text-xs text-[#F4F1EA] disabled:opacity-50"
         >
           {drafting ? 'Drafting…' : 'Draft note'}
         </button>

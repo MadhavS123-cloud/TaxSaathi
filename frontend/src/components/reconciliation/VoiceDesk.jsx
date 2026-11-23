@@ -88,7 +88,7 @@ export default function VoiceDesk({ caseId, selectedRow, onReviewed }) {
   };
 
   return (
-    <section className="bg-paper border border-hairline p-6">
+    <section id="voice" className="rounded-2xl border border-hairline bg-paper-raised p-6">
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-hairline pb-4 mb-4">
         <div>
           <h2 className="font-serif text-xl">Voice desk</h2>
@@ -101,7 +101,7 @@ export default function VoiceDesk({ caseId, selectedRow, onReviewed }) {
             type="button"
             onClick={ask}
             disabled={busy}
-            className="bg-ink text-paper px-4 py-2 font-mono text-xs disabled:opacity-50 inline-flex items-center gap-2"
+            className="inline-flex items-center gap-2 rounded-full bg-[#1C1915] px-4 py-2 font-sans text-xs text-[#F4F1EA] disabled:opacity-50"
           >
             {listening ? <Square size={14} /> : <Mic size={14} />}
             {listening ? "Stop" : "Ask"}

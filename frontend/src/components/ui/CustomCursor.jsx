@@ -6,7 +6,10 @@ const CREAM = '#F3EDE2';
 
 export default function CustomCursor() {
   const path = useLocation().pathname;
-  const onLanding = path === '/' || path === '/login';
+  const onDesk = path.startsWith('/app');
+  const onMark = path === '/' || path === '/login' || onDesk;
+  const dot = onDesk ? '#1C1915' : CREAM;
+  const caret = onDesk ? '#1C1915' : CREAM;
   const [isActive, setIsActive] = useState(false);
   const [variant, setVariant] = useState('default');
   const [isClicking, setIsClicking] = useState(false);
@@ -81,7 +84,7 @@ export default function CustomCursor() {
 
     const render = () => {
       place(innerRef.current, mouse.current);
-      if (!onLanding) {
+      if (!onMark) {
         const dx = mouse.current.x - outerMouse.current.x;
         const dy = mouse.current.y - outerMouse.current.y;
         if (dx * dx + dy * dy > 160000) {
@@ -98,15 +101,15 @@ export default function CustomCursor() {
 
     requestRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(requestRef.current);
-  }, [isActive, onLanding]);
+  }, [isActive, onMark]);
 
   if (!isActive || !hasMoved) return null;
 
-  if (onLanding) {
+  if (onMark) {
     if (variant === 'text') {
       return (
         <div ref={innerRef} className="pointer-events-none fixed left-0 top-0 z-[9999]" aria-hidden="true">
-          <span className="block h-5 w-px" style={{ background: CREAM }} />
+          <span className="block h-5 w-px" style={{ background: caret }} />
         </div>
       );
     }
@@ -125,7 +128,7 @@ export default function CustomCursor() {
             <line x1="22" y1="2" x2="22" y2="13" stroke={GOLD} strokeWidth="0.75" />
             <line x1="22" y1="31" x2="22" y2="42" stroke={GOLD} strokeWidth="0.75" />
           </g>
-          <circle cx="22" cy="22" r="1.6" fill={CREAM} style={{ transformBox: 'view-box', transformOrigin: '22px 22px', transform: `scale(${dotScale})`, transition: 'transform 180ms ease-out' }} />
+          <circle cx="22" cy="22" r="1.6" fill={dot} style={{ transformBox: 'view-box', transformOrigin: '22px 22px', transform: `scale(${dotScale})`, transition: 'transform 180ms ease-out' }} />
         </svg>
       </div>
     );

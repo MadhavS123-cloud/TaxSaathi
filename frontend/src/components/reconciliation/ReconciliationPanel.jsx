@@ -108,7 +108,7 @@ export default function ReconciliationPanel({
           <button
             onClick={handleRun}
             disabled={isRunning || !invoiceFile || !paymentFile}
-            className="bg-ink text-paper px-6 py-2 font-mono text-sm disabled:opacity-50 hover:bg-charcoal transition-colors border border-ink"
+            className="rounded-full bg-[#1C1915] px-6 py-2 font-sans text-sm text-[#F4F1EA] transition-colors disabled:opacity-50"
           >
             {isRunning ? "Running..." : "Run Reconciliation"}
           </button>

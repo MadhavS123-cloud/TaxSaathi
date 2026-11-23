@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import ReconciliationPanel from '../components/reconciliation/ReconciliationPanel';
 import { FolderKanban, History } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import DeskPageHeader from '../components/layout/DeskPageHeader';
 
 export default function Reconciliation() {
   const [isRunning, setIsRunning] = useState(false);
@@ -12,6 +14,14 @@ export default function Reconciliation() {
   const [cases, setCases] = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState('');
   const [loadedFromHistory, setLoadedFromHistory] = useState(false);
+  const { hash } = useLocation();
+
+  useEffect(() => {
+    if (hash !== '#voice') return undefined;
+    const node = document.getElementById('voice');
+    if (node) node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return undefined;
+  }, [hash]);
 
   useEffect(() => {
     api.cases.list()
@@ -81,13 +91,12 @@ export default function Reconciliation() {
 
   return (
     <div className="max-w-6xl mx-auto pb-12">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h2 className="text-3xl font-serif text-ink tracking-tight mb-2">Ledger Reconciliation</h2>
-          <p className="text-ink-muted text-sm">
-            Match tax invoices with bank statements to spot discrepancies, variance exceptions, and timing differences.
-          </p>
-        </div>
+      <div className="flex items-start justify-between gap-6">
+        <DeskPageHeader
+          eyebrow="Your practice / Ledgers"
+          title={hash === '#voice' ? 'Voice Desk' : 'Ledger Reconciliation'}
+          subtitle="Match tax invoices with bank payments, then ask the voice desk what is still outstanding."
+        />
 
         {/* Case selector */}
         {cases.length > 0 && (

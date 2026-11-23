@@ -19,3 +19,21 @@
   background-color: var(--paper);
   color: var(--ink);
 }
+
+/* Signed-in desk. Cream workspace, warm ink, gold only as a highlight. */
+.desk {
+  --ink: #1C1915;
+  --charcoal: #5C564C;
+  --paper: #F4F1EA;
+  --taupe: #EBE6DC;
+  --paper-raised: #FBF9F4;
+  --hairline: #E4DDD0;
+  --brass: #C6A15B;
+  --brass-deep: #8C6B2E;
+  --forest: #2F6B45;
+  --rust: #9A4A38;
+  --amber-flag: #9A6230;
+  --ink-muted: #8A8478;
+  background-color: #F4F1EA;
+  color: #1C1915;
+}

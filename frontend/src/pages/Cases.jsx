@@ -7,6 +7,7 @@ import StatusTag from '../components/ui/StatusTag';
 import NewCaseModal from '../components/dashboard/NewCaseModal';
 import NewClientModal from '../components/dashboard/NewClientModal';
 import { api } from '../lib/api';
+import DeskPageHeader from '../components/layout/DeskPageHeader';
 
 export default function Cases() {
   const navigate = useNavigate();
@@ -55,13 +56,11 @@ export default function Cases() {
   return (
     <div className="max-w-6xl mx-auto pb-12">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h2 className="text-3xl font-serif text-ink tracking-tight mb-2">Practice Registry</h2>
-          <p className="text-ink-muted font-sans text-sm">
-            Manage your firm's corporate clients and audit assignments.
-          </p>
-        </div>
+      <DeskPageHeader
+        eyebrow="Your practice / Records"
+        title="Invoice Data Review"
+        subtitle="Clients, cases, and the documents waiting to be checked."
+      >
         <div className="flex items-center gap-3">
           <SecondaryButton onClick={() => setIsClientModalOpen(true)}>
             <UserPlus size={14} className="inline mr-1.5" /> + New Client
@@ -70,7 +69,7 @@ export default function Cases() {
             <Plus size={14} className="inline mr-1.5" /> + Create New Case
           </PrimaryButton>
         </div>
-      </div>
+      </DeskPageHeader>
 
       {/* Tabs */}
       <div className="flex border-b border-hairline mb-6">

@@ -1,11 +1,15 @@
 import React from 'react';
 import AdvisoryChat from '../components/advisory/AdvisoryChat';
+import DeskPageHeader from '../components/layout/DeskPageHeader';
 
 export default function Advisory() {
   return (
     <div className="max-w-6xl mx-auto pb-12">
-      <h2 className="text-3xl font-serif text-ink tracking-tight mb-2">Tax Advisory Chat</h2>
-      <p className="text-ink-muted mb-6">Ask questions about Indian tax law and receive grounded, citeable answers powered by RAG and AI.</p>
+      <DeskPageHeader
+        eyebrow="Your practice / Advisory"
+        title="Tax Advisory Chat"
+        subtitle="Ask about the Income Tax Act 2025, CGST Act, or IGST Act. Answers stay inside the statute text on file."
+      />
       
       <AdvisoryChat />
 

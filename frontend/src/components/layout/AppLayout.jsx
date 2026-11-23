@@ -9,9 +9,9 @@ export default function AppLayout() {
     const previousRoot = root.style.backgroundColor;
     const previousBody = document.body.style.backgroundColor;
     const previousColor = document.body.style.color;
-    root.style.backgroundColor = '#0C0C0C';
-    document.body.style.backgroundColor = '#0C0C0C';
-    document.body.style.color = '#F3EDE2';
+    root.style.backgroundColor = '#F4F1EA';
+    document.body.style.backgroundColor = '#F4F1EA';
+    document.body.style.color = '#1C1915';
     return () => {
       root.style.backgroundColor = previousRoot;
       document.body.style.backgroundColor = previousBody;
@@ -20,16 +20,18 @@ export default function AppLayout() {
   }, []);
 
   return (
-    <div className="desk relative z-0 flex min-h-screen overflow-hidden bg-paper">
-      <div
-        className="pointer-events-none fixed inset-0"
-        style={{ background: 'radial-gradient(ellipse at 12% 0%, rgba(201,169,110,0.07), transparent 40%)' }}
-      />
+    <div className="desk relative z-0 flex min-h-screen bg-paper text-ink">
       <Sidebar />
-      <div className="relative z-10 ml-[240px] flex flex-1 flex-col">
+      <div className="ml-[248px] flex min-h-screen flex-1 flex-col">
         <Topbar />
-        <main className="flex-1 p-8">
-          <Outlet />
+        <main className="flex flex-1 flex-col px-8 pb-6 pt-8">
+          <div className="flex-1">
+            <Outlet />
+          </div>
+          <footer className="mt-10 flex items-center justify-between font-sans text-[11px] uppercase tracking-[0.16em] text-ink-muted">
+            <span>Your work, thoughtfully organised.</span>
+            <span>Secure by design</span>
+          </footer>
         </main>
       </div>
     </div>
