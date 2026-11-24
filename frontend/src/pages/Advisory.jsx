@@ -18,6 +18,7 @@ export default function Advisory() {
         <div className="bg-paper-raised border border-hairline p-4">
           <h3 className="font-serif text-ink mb-2">How it Works</h3>
           <ul className="text-sm text-ink-muted space-y-2 font-sans">
+            <li>• Type a question, or speak it. Spoken questions are transcribed, then answered from the statute</li>
             <li>• Ask any question about Income Tax Act, CGST Act, or IGST Act</li>
             <li>• The system retrieves relevant sections from official tax legislation</li>
             <li>• Responses include citations and confidence scores for verification</li>

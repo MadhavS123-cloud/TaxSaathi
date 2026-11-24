@@ -1,7 +1,7 @@
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import { Mic, Square, Volume2 } from "lucide-react";
 import { api } from "../../lib/api";
-import { blobToWav } from "../../lib/wav";
+import { useVoiceRecorder } from "../../lib/useVoiceRecorder";
 
 function playWav(base64) {
   const audio = new Audio(`data:audio/wav;base64,${base64}`);
@@ -9,18 +9,12 @@ function playWav(base64) {
 }
 
 export default function VoiceDesk({ caseId, selectedRow, onReviewed }) {
-  const [listening, setListening] = useState(false);
   const [busy, setBusy] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState("");
   const [language, setLanguage] = useState("hi-IN");
-  const recorderRef = useRef(null);
-  const chunksRef = useRef([]);
-
-  const stopTracks = (recorder) => {
-    recorder.stream.getTracks().forEach((track) => track.stop());
-  };
+  const { listening, start, stop } = useVoiceRecorder();
 
   const ask = async () => {
     if (!caseId) {
@@ -28,45 +22,32 @@ export default function VoiceDesk({ caseId, selectedRow, onReviewed }) {
       return;
     }
     setError("");
-    if (listening && recorderRef.current) {
-      recorderRef.current.stop();
+    if (listening) {
+      stop();
       return;
     }
-    let stream;
+    let wav;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      wav = await start();
     } catch {
       setError("The microphone is not available.");
       return;
     }
-    const recorder = new MediaRecorder(stream);
-    chunksRef.current = [];
-    recorder.ondataavailable = (event) => {
-      if (event.data.size) chunksRef.current.push(event.data);
-    };
-    recorder.onstop = async () => {
-      stopTracks(recorder);
-      setListening(false);
-      setBusy(true);
-      try {
-        const wav = await blobToWav(new Blob(chunksRef.current, { type: recorder.mimeType }));
-        const rowKey = selectedRow?.invoice?.id || selectedRow?.payment?.id || "";
-        const result = await api.voice.turn(caseId, wav, rowKey);
-        setTranscript(result.transcript || "");
-        setAnswer(result.answer || "");
-        if (result.audio_base64) await playWav(result.audio_base64);
-        if (result.review_status && rowKey && onReviewed) {
-          onReviewed(rowKey, result.review_status);
-        }
-      } catch (err) {
-        setError(err.message || "The voice request failed.");
-      } finally {
-        setBusy(false);
+    setBusy(true);
+    try {
+      const rowKey = selectedRow?.invoice?.id || selectedRow?.payment?.id || "";
+      const result = await api.voice.turn(caseId, wav, rowKey);
+      setTranscript(result.transcript || "");
+      setAnswer(result.answer || "");
+      if (result.audio_base64) await playWav(result.audio_base64);
+      if (result.review_status && rowKey && onReviewed) {
+        onReviewed(rowKey, result.review_status);
       }
-    };
-    recorderRef.current = recorder;
-    recorder.start();
-    setListening(true);
+    } catch (err) {
+      setError(err.message || "The voice request failed.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const remind = async () => {

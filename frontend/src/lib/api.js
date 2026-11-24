@@ -250,5 +250,10 @@ export const api = {
     },
     remind: (caseId, language = 'hi-IN') =>
       request('POST', '/voice/remind', { case_id: caseId, language }),
+    transcribe: (wavBlob) => {
+      const fd = new FormData();
+      fd.append('audio', wavBlob, 'speech.wav');
+      return request('POST', '/voice/transcribe', fd, true);
+    },
   },
 };

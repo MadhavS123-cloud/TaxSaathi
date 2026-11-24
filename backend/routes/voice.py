@@ -52,6 +52,20 @@ class RemindResponse(VoiceTurnResponse):
     intent: str = "remind"
 
 
+class TranscribeResponse(BaseModel):
+    transcript: str
+
+
+_AUDIO_SUFFIXES = (".wav", ".mp3", ".ogg", ".flac", ".aac", ".m4a")
+
+
+def accepted_clip_name(filename: str | None) -> str:
+    name = filename or "speech.wav"
+    if not name.lower().endswith(_AUDIO_SUFFIXES):
+        raise HTTPException(status_code=400, detail="Send a wav recording. The browser converts the microphone clip before upload.")
+    return name
+
+
 def _case_for_user(db: Session, case_id: str, user: User) -> Case:
     case = db.query(Case).filter(Case.id == case_id).first()
     if not case:
@@ -140,9 +154,7 @@ async def voice_turn(
     audio_bytes = await audio.read()
     if len(audio_bytes) > _MAX_AUDIO:
         raise HTTPException(status_code=400, detail="The recording is too long. Keep it under 30 seconds.")
-    name = audio.filename or "speech.wav"
-    if not name.lower().endswith((".wav", ".mp3", ".ogg", ".flac", ".aac", ".m4a")):
-        raise HTTPException(status_code=400, detail="Send a wav recording. The browser converts the microphone clip before upload.")
+    name = accepted_clip_name(audio.filename)
     try:
         transcript = transcribe(audio_bytes, name)
     except SpeechError as exc:
@@ -200,6 +212,24 @@ async def voice_turn(
         count=count,
         total_due=due,
     )
+
+
+@router.post("/transcribe", response_model=TranscribeResponse)
+async def voice_transcribe(
+    audio: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """Turn a short recording into text. The caller decides what to do with the words."""
+    del current_user
+    audio_bytes = await audio.read()
+    if len(audio_bytes) > _MAX_AUDIO:
+        raise HTTPException(status_code=400, detail="The recording is too long. Keep it under 30 seconds.")
+    name = accepted_clip_name(audio.filename)
+    try:
+        transcript = transcribe(audio_bytes, name)
+    except SpeechError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return TranscribeResponse(transcript=transcript)
 
 
 @router.post("/remind", response_model=RemindResponse)

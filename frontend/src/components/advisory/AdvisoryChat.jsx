@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { api } from '../../lib/api';
 import StatusTag from '../ui/StatusTag';
 import ConfidenceBar from '../ui/ConfidenceBar';
-import { BookOpen, FolderKanban } from 'lucide-react';
+import { BookOpen, FolderKanban, Mic, Square } from 'lucide-react';
+import { useVoiceRecorder } from '../../lib/useVoiceRecorder';
 
 const AdvisoryChat = ({ initialCaseId = null }) => {
   const [caseId, setCaseId] = useState(initialCaseId);
@@ -17,9 +18,11 @@ const AdvisoryChat = ({ initialCaseId = null }) => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [hearing, setHearing] = useState(false);
   const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const { listening, start, stop } = useVoiceRecorder();
 
   // Load cases list
   useEffect(() => {
@@ -57,11 +60,9 @@ const AdvisoryChat = ({ initialCaseId = null }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
-
-    const userQuery = inputValue.trim();
+  const sendQuestion = async (rawText) => {
+    const userQuery = (rawText ?? inputValue).trim();
+    if (!userQuery || isLoading) return;
     const userMessage = {
       id: `msg-${Date.now()}`,
       type: 'user',
@@ -108,6 +109,41 @@ const AdvisoryChat = ({ initialCaseId = null }) => {
     } finally {
       setIsLoading(false);
       inputRef.current?.focus();
+    }
+  };
+
+  const handleSendMessage = (event) => {
+    event.preventDefault();
+    sendQuestion();
+  };
+
+  const speakQuestion = async () => {
+    setError(null);
+    if (listening) {
+      stop();
+      return;
+    }
+    let wav;
+    try {
+      wav = await start();
+    } catch {
+      setError('The microphone is not available.');
+      return;
+    }
+    setHearing(true);
+    try {
+      const heard = await api.voice.transcribe(wav);
+      const transcript = (heard?.transcript || '').trim();
+      if (!transcript) {
+        setError('Nothing was heard. Speak the question again.');
+        return;
+      }
+      setInputValue(transcript);
+      await sendQuestion(transcript);
+    } catch (err) {
+      setError(err.message || 'The recording could not be transcribed.');
+    } finally {
+      setHearing(false);
     }
   };
 
@@ -242,18 +278,34 @@ const AdvisoryChat = ({ initialCaseId = null }) => {
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Ask a question on Indian tax law (e.g., 'What is Section 194Q TDS on goods?')"
-            disabled={isLoading}
+            placeholder={listening ? 'Listening…' : "Ask a question on Indian tax law, or speak it"}
+            disabled={isLoading || hearing || listening}
+            data-cursor="text"
             className="flex-1 bg-paper border border-hairline px-3 py-2 font-sans text-sm focus:outline-none focus:border-brass rounded-[2px] disabled:opacity-50 text-ink placeholder:text-ink-muted/60"
           />
           <button
+            type="button"
+            onClick={speakQuestion}
+            disabled={isLoading || hearing}
+            data-cursor="interactive"
+            title={listening ? 'Stop and send the question' : 'Speak a question'}
+            className="inline-flex items-center gap-1.5 rounded-full border border-hairline px-4 py-2 font-sans text-xs text-ink disabled:opacity-50"
+          >
+            {listening ? <Square size={14} /> : <Mic size={14} />}
+            {listening ? 'Stop' : 'Speak'}
+          </button>
+          <button
             type="submit"
-            disabled={isLoading || !inputValue.trim()}
+            disabled={isLoading || hearing || !inputValue.trim()}
+            data-cursor="interactive"
             className="rounded-full bg-[#1C1915] px-5 py-2 font-sans text-xs text-[#F4F1EA] transition-colors disabled:opacity-50"
           >
             {isLoading ? 'Querying…' : 'Ask'}
           </button>
         </form>
+        <p className="mt-2 font-sans text-[11px] text-ink-muted">
+          Speak in Hindi or English. The words are written into the question, then answered from the statute.
+        </p>
       </div>
     </div>
   );

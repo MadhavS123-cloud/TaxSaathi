@@ -2,6 +2,10 @@
 
 from decimal import Decimal
 
+import pytest
+from fastapi import HTTPException
+
+from routes.voice import accepted_clip_name
 from voice.answers import amount_due, partial_answer, partial_rows, reminder_answer, total_due, unpaid_rows
 from voice.intent import parse_intent, spoken_client
 from voice.numbers import inr_words
@@ -15,6 +19,14 @@ def _partial(invoice_id, shortfall, party="Sharma Traders"):
         "invoice": {"id": invoice_id, "party_name": party, "amount": "20000", "reference": invoice_id},
         "review_status": None,
     }
+
+
+def test_advisory_clip_accepts_wav_and_rejects_other_files():
+    assert accepted_clip_name("speech.wav") == "speech.wav"
+    assert accepted_clip_name(None) == "speech.wav"
+    with pytest.raises(HTTPException) as caught:
+        accepted_clip_name("notes.txt")
+    assert caught.value.status_code == 400
 
 
 def test_hinglish_partial_question_names_the_client():
