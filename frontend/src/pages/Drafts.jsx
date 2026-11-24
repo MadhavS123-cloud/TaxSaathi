@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import DeskPageHeader from '../components/layout/DeskPageHeader';
+import WhatsAppSendButton from '../components/WhatsAppSendButton';
 
 export default function Drafts() {
   const [cases, setCases] = useState([]);
@@ -9,6 +10,7 @@ export default function Drafts() {
   const [loadingCases, setLoadingCases] = useState(true);
   const [drafting, setDrafting] = useState(false);
   const [error, setError] = useState(null);
+  const [reviewed, setReviewed] = useState(false);
 
   useEffect(() => {
     api.cases.list()
@@ -23,6 +25,7 @@ export default function Drafts() {
     setDrafting(true);
     setError(null);
     setDraft(null);
+    setReviewed(false);
     try {
       const result = await api.drafts.create(caseId);
       setDraft(result);
@@ -49,6 +52,7 @@ export default function Drafts() {
             onChange={(event) => {
               setCaseId(event.target.value);
               setDraft(null);
+              setReviewed(false);
             }}
             disabled={loadingCases}
             className="bg-paper border border-hairline text-sm font-sans text-ink px-2 py-2 min-w-[240px] focus:outline-none focus:border-brass"
@@ -87,6 +91,18 @@ export default function Drafts() {
           <div className="px-6 py-5">
             <h3 className="font-serif text-xl text-ink mb-4">{draft.subject}</h3>
             <pre className="font-sans text-sm text-ink whitespace-pre-wrap leading-relaxed">{draft.body}</pre>
+          </div>
+          <div className="border-t border-hairline px-6 py-4">
+            <label className="mb-4 flex items-center gap-2 font-sans text-sm text-ink">
+              <input
+                type="checkbox"
+                checked={reviewed}
+                onChange={(event) => setReviewed(event.target.checked)}
+                className="accent-brass"
+              />
+              I have reviewed this draft
+            </label>
+            <WhatsAppSendButton draft={draft.body || ''} disabled={!reviewed || !draft.body} />
           </div>
         </article>
       )}
