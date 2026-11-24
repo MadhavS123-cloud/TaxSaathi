@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Mail } from 'lucide-react';
 import { api } from '../lib/api';
 import DeskPageHeader from '../components/layout/DeskPageHeader';
 import WhatsAppSendButton from '../components/WhatsAppSendButton';
@@ -11,6 +12,10 @@ export default function Drafts() {
   const [drafting, setDrafting] = useState(false);
   const [error, setError] = useState(null);
   const [reviewed, setReviewed] = useState(false);
+  const [toEmail, setToEmail] = useState('');
+  const [emailSubject, setEmailSubject] = useState('Update from your CA firm');
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailNotice, setEmailNotice] = useState(null);
 
   useEffect(() => {
     api.cases.list()
@@ -26,6 +31,8 @@ export default function Drafts() {
     setError(null);
     setDraft(null);
     setReviewed(false);
+    setEmailNotice(null);
+    setEmailSubject('Update from your CA firm');
     try {
       const result = await api.drafts.create(caseId);
       setDraft(result);
@@ -33,6 +40,20 @@ export default function Drafts() {
       setError(err.message || 'Could not draft the client note.');
     } finally {
       setDrafting(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!reviewed || !draft?.body || !toEmail.trim() || sendingEmail) return;
+    setSendingEmail(true);
+    setEmailNotice(null);
+    try {
+      await api.drafts.sendEmail(toEmail.trim(), emailSubject, draft.body);
+      setEmailNotice({ ok: true, text: 'Email sent.' });
+    } catch (err) {
+      setEmailNotice({ ok: false, text: err.message || 'The email could not be sent.' });
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -53,6 +74,8 @@ export default function Drafts() {
               setCaseId(event.target.value);
               setDraft(null);
               setReviewed(false);
+              setEmailNotice(null);
+              setEmailSubject('Update from your CA firm');
             }}
             disabled={loadingCases}
             className="bg-paper border border-hairline text-sm font-sans text-ink px-2 py-2 min-w-[240px] focus:outline-none focus:border-brass"
@@ -102,7 +125,49 @@ export default function Drafts() {
               />
               I have reviewed this draft
             </label>
-            <WhatsAppSendButton draft={draft.body || ''} disabled={!reviewed || !draft.body} />
+            <div className="grid gap-6 md:grid-cols-2">
+              <WhatsAppSendButton draft={draft.body || ''} disabled={!reviewed || !draft.body} />
+              <div className="flex flex-col gap-3">
+                <label className="flex flex-col gap-1 text-xs font-mono uppercase tracking-wider text-ink-muted">
+                  Client email
+                  <input
+                    type="email"
+                    value={toEmail}
+                    onChange={(event) => setToEmail(event.target.value)}
+                    placeholder="client@firm.in"
+                    disabled={!reviewed || !draft.body || sendingEmail}
+                    data-cursor="text"
+                    className="bg-paper border border-hairline px-3 py-2 font-mono text-sm normal-case tracking-normal text-ink placeholder:text-ink-muted focus:outline-none focus:border-brass disabled:opacity-50"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs font-mono uppercase tracking-wider text-ink-muted">
+                  Subject
+                  <input
+                    type="text"
+                    value={emailSubject}
+                    onChange={(event) => setEmailSubject(event.target.value)}
+                    disabled={!reviewed || !draft.body || sendingEmail}
+                    data-cursor="text"
+                    className="bg-paper border border-hairline px-3 py-2 font-sans text-sm normal-case tracking-normal text-ink focus:outline-none focus:border-brass disabled:opacity-50"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={handleSendEmail}
+                  disabled={!reviewed || !draft.body || !toEmail.trim() || sendingEmail}
+                  data-cursor="interactive"
+                  className="inline-flex w-fit items-center gap-2 border border-brass bg-paper px-4 py-2 font-sans text-sm text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Mail size={16} strokeWidth={1.5} className="text-brass" />
+                  {sendingEmail ? 'Sending…' : 'Send via Email'}
+                </button>
+                {emailNotice && (
+                  <p className={`font-sans text-xs ${emailNotice.ok ? 'text-forest' : 'text-rust'}`}>
+                    {emailNotice.text}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </article>
       )}

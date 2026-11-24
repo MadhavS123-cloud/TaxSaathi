@@ -232,6 +232,12 @@ export const api = {
   // Client communication drafts
   drafts: {
     create: (caseId) => request('POST', '/draft', { case_id: caseId }),
+    sendEmail: (toEmail, subject, body) =>
+      request('POST', '/api/communication/send-email', {
+        to_email: toEmail,
+        subject,
+        body,
+      }),
   },
 
   // Review & Approve
