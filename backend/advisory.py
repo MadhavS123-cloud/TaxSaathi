@@ -692,37 +692,42 @@ def _invoke_structured_with_retries(
 # ---------------------------------------------------------------------------
 # 8. Markdown Formatter for Unified Presentation
 # ---------------------------------------------------------------------------
+def _plain_advisory_text(text: str) -> str:
+    """Drop markdown marks so a chat reply does not look like a generated document."""
+    cleaned = (text or "").replace("**", "").replace("###", "").replace("`", "")
+    return "\n".join(line.replace("*", "") if line.strip().startswith("*") else line for line in cleaned.splitlines())
+
+
 def format_ca_response_as_markdown(resp: CARagResponse) -> str:
-    """Format CARagResponse into a clean, executive-ready Markdown document."""
+    """Format CARagResponse as plain sections for the advisory chat."""
     if resp.response_mode == ResponseMode.OUT_OF_DOMAIN:
-        return resp.executive_summary
+        return _plain_advisory_text(resp.executive_summary)
 
     parts = []
-    parts.append(f"### Direct Answer\n{resp.executive_summary.strip()}")
+    parts.append(f"Direct answer\n{_plain_advisory_text(resp.executive_summary.strip())}")
 
     if resp.detailed_analysis and resp.detailed_analysis.strip():
-        parts.append(f"### Detailed Analysis\n{resp.detailed_analysis.strip()}")
+        parts.append(f"Detailed analysis\n{_plain_advisory_text(resp.detailed_analysis.strip())}")
 
     if resp.compliance_actionables:
-        action_bullets = "\n".join(f"- {act}" for act in resp.compliance_actionables)
-        parts.append(f"### Compliance & Actionables\n{action_bullets}")
+        action_bullets = "\n".join(f"- {_plain_advisory_text(act)}" for act in resp.compliance_actionables)
+        parts.append(f"Compliance and actionables\n{action_bullets}")
 
     if resp.citations:
         cite_lines = []
         for c in resp.citations:
-            summary = c.provision_summary or c.excerpt_summary or ""
-            ref = c.section_reference
-            chunk_tag = f" `[{c.chunk_id}]`" if c.chunk_id else ""
-            cite_lines.append(f"- **{c.act_name}**, {ref}{chunk_tag}: {summary}")
-        parts.append(f"### Statutory Citations\n" + "\n".join(cite_lines))
+            summary = _plain_advisory_text(c.provision_summary or c.excerpt_summary or "")
+            ref = _plain_advisory_text(c.section_reference)
+            cite_lines.append(f"- {c.act_name}, {ref}: {summary}")
+        parts.append("Statutory citations\n" + "\n".join(cite_lines))
 
     if resp.assumptions_and_caveats:
-        caveat_bullets = "\n".join(f"- *{c}*" for c in resp.assumptions_and_caveats)
-        parts.append(f"### Assumptions & Caveats\n{caveat_bullets}")
+        caveat_bullets = "\n".join(f"- {_plain_advisory_text(c)}" for c in resp.assumptions_and_caveats)
+        parts.append(f"Assumptions and caveats\n{caveat_bullets}")
 
     if resp.follow_up_questions:
-        q_bullets = "\n".join(f"- {q}" for q in resp.follow_up_questions)
-        parts.append(f"### Follow-up Considerations\n{q_bullets}")
+        q_bullets = "\n".join(f"- {_plain_advisory_text(q)}" for q in resp.follow_up_questions)
+        parts.append(f"Follow-up considerations\n{q_bullets}")
 
     return "\n\n".join(parts)
 

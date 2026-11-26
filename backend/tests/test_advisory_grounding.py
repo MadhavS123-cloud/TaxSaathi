@@ -184,10 +184,12 @@ def test_format_ca_response_as_markdown():
     )
 
     md = advisory.format_ca_response_as_markdown(resp)
-    assert "### Direct Answer" in md
-    assert "### Detailed Analysis" in md
-    assert "### Compliance & Actionables" in md
-    assert "### Statutory Citations" in md
-    assert "### Assumptions & Caveats" in md
-    assert "### Follow-up Considerations" in md
+    assert "Direct answer" in md
+    assert "Detailed analysis" in md
+    assert "Compliance and actionables" in md
+    assert "Statutory citations" in md
+    assert "Assumptions and caveats" in md
+    assert "Follow-up considerations" in md
+    assert "###" not in md
+    assert "**" not in md
     assert "GSTR-2B" in md
