@@ -35,8 +35,9 @@ pdfplumber==0.11.10
 pandas==3.0.6
 openpyxl==3.1.5
 
-# Vector Database
+# Vector Database & Search
 chromadb==1.5.9
+rank-bm25>=0.2.2
 
 # RAGAS 0.2.15 scores the advisory golden set. Newer RAGAS needs a C++ build
 # of scikit-network, which this Python has no wheel for. These companion

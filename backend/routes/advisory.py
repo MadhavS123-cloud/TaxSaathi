@@ -1,5 +1,5 @@
 """
-routes/advisory.py - RAG-powered Indian Tax Advisory API.
+routes/advisory.py - RAG-powered Indian Tax Advisory API with 3-Tier Guardrails.
 
 Endpoints:
   POST /advisory/ask     - Ask statutory tax questions, receive grounded answers + citations
@@ -56,7 +56,8 @@ async def ask_advisory(
 ):
     """
     Query the RAG advisory system with a tax question.
-    Grounded with citations against bare acts (Income Tax Act, CGST Act, IGST Act).
+    Grounded with citations against bare acts (Income Tax Act, CGST Act, IGST Act)
+    and protected with 3-Tier Guardrails & Structured Output Parsing.
     """
     query_text = (request.question or request.query or "").strip()
     if not query_text:
@@ -79,33 +80,31 @@ async def ask_advisory(
                         subsection=sec.get("subsection", ""),
                         excerpt=sec.get("excerpt", ""),
                         source_file=sec.get("source_file", ""),
+                        chunk_id=sec.get("chunk_id"),
                     )
                 )
             except Exception:
                 continue
 
-        confidence_level = parsed.get("confidence_level", "LOW").upper()
-        confidence_map = {"HIGH": 0.90, "MEDIUM": 0.65, "LOW": 0.35}
-        confidence = confidence_map.get(confidence_level, 0.35)
+        response_mode = result.get("response_mode", "CORPUS_GROUNDED")
+        is_verified = result.get("is_corpus_verified", False)
 
-        is_insufficient = parsed.get("is_insufficient_context", False)
-        if is_insufficient:
-            confidence = 0.10
+        if is_verified and response_mode == "CORPUS_GROUNDED":
+            confidence = 0.92
+        elif response_mode == "GENERAL_FINANCE_FALLBACK":
+            confidence = 0.65
+        else:
+            confidence = 0.15
 
-        confidence = min(0.95, confidence)
-        is_low_confidence = confidence < 0.7
+        is_low_confidence = confidence < 0.70
 
         notes = None
-        if is_insufficient:
-            notes = (
-                "The corpus does not contain the answer. "
-                "Verify with the official bare act. Do not rely on the Income Tax Act, 1961."
-            )
-        elif is_low_confidence:
-            notes = (
-                "This answer is based on partial context. "
-                "Cross-check the cited provisions against the official bare act before advising clients."
-            )
+        if response_mode == "OUT_OF_DOMAIN":
+            notes = "Query classified as out-of-domain."
+        elif response_mode == "GENERAL_FINANCE_FALLBACK":
+            notes = "Answered using general financial/tax knowledge (not verified from indexed Acts corpus)."
+        elif not is_verified:
+            notes = "Direct statutory provisions were not found in the indexed corpus. Verify against official bare acts."
 
         answer_text = result.get("answer", "")
         if not answer_text.strip():
@@ -142,6 +141,13 @@ async def ask_advisory(
             confidence=confidence,
             is_low_confidence=is_low_confidence,
             notes=notes,
+            response_mode=response_mode,
+            is_corpus_verified=is_verified,
+            executive_summary=result.get("executive_summary"),
+            detailed_analysis=result.get("detailed_analysis"),
+            compliance_actionables=result.get("compliance_actionables", []),
+            assumptions_and_caveats=result.get("assumptions_and_caveats", []),
+            follow_up_questions=result.get("follow_up_questions", []),
         )
 
     except RuntimeError as e:
